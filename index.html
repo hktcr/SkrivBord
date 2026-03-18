@@ -1351,6 +1351,7 @@
                     <span class="fs-width-value" id="fsWidthValue">72ch</span>
                 </div>
                 <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
+                <button class="fs-btn tooltip-wrap" id="btnBrowserFs" data-tip="Helskärm i webbläsaren" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="exitFullscreen()">✕ Stäng</button>
             </div>
@@ -1986,7 +1987,28 @@
             }
 
             overlay.classList.remove('visible');
+
+            // Exit browser fullscreen if active
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            }
         }
+
+        function toggleBrowserFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        // Update button label when browser fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('btnBrowserFs');
+            if (btn) {
+                btn.textContent = document.fullscreenElement ? '⛶ Avsluta' : '⛶ Helskärm';
+            }
+        });
 
         // Fullscreen textarea events
         document.getElementById('fsTextarea').addEventListener('input', (e) => {
