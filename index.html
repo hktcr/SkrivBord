@@ -777,6 +777,199 @@
             color: var(--success);
         }
 
+        /* ── TIMER & GOAL WIDGETS ── */
+        .timer-widget {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            font-variant-numeric: tabular-nums;
+            position: relative;
+        }
+
+        .timer-widget:hover {
+            background: rgba(255,255,255,0.06);
+        }
+
+        .timer-widget .timer-running {
+            color: var(--accent-light);
+        }
+
+        .timer-popover {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            margin-bottom: 6px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            min-width: 260px;
+            z-index: 2000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .timer-popover.open {
+            display: block;
+        }
+
+        .timer-popover label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            display: block;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+
+        .timer-popover label:first-child {
+            margin-top: 0;
+        }
+
+        .timer-popover select,
+        .timer-popover input[type="number"] {
+            width: 100%;
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text-bright);
+            font-size: 0.75rem;
+            outline: none;
+        }
+
+        .timer-popover input[type="number"] {
+            width: 70px;
+        }
+
+        .timer-popover .pop-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .timer-popover .pop-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-bright);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .timer-popover .pop-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .timer-popover .pop-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .timer-popover .pop-btn.primary:hover {
+            filter: brightness(1.15);
+        }
+
+        .timer-popover hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 10px 0;
+        }
+
+        .timer-popover .check-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 6px;
+        }
+
+        .goal-widget {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .goal-bar {
+            width: 60px;
+            height: 5px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .goal-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            background: var(--text-muted);
+            transition: width 0.3s ease, background 0.5s ease;
+        }
+
+        .goal-fill.progress-75 {
+            background: var(--accent);
+        }
+
+        .goal-fill.done {
+            background: var(--success);
+            animation: goalPulse 0.6s ease;
+        }
+
+        @keyframes goalPulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+        }
+
+        /* Focus-view timer + goal */
+        .fs-timer {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+            margin-right: 8px;
+            opacity: 0.6;
+        }
+
+        .fs-timer.running {
+            color: var(--accent-light);
+            opacity: 1;
+        }
+
+        .fs-goal-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: transparent;
+            z-index: 1015;
+            pointer-events: none;
+        }
+
+        .fs-goal-fill-line {
+            height: 100%;
+            width: 0%;
+            background: var(--text-muted);
+            transition: width 0.3s, background 0.5s;
+            border-radius: 0 2px 2px 0;
+        }
+
+        .fs-goal-fill-line.progress-75 {
+            background: var(--accent);
+        }
+
+        .fs-goal-fill-line.done {
+            background: var(--success);
+        }
+
         /* ── PRINT / PDF ── */
         @media print {
             .toolbar, .tab-bar, .status-bar, .editor-pane, .pane-label,
@@ -1255,6 +1448,48 @@
         <div class="status-item" id="statusWords">0 ord</div>
         <div class="status-item" id="statusLines">0 rader</div>
         <div style="flex:1"></div>
+        <div class="goal-widget status-item" id="goalWidget" style="display:none;">
+            <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
+            <span id="goalDisplay">—</span>
+        </div>
+        <div class="timer-widget status-item" id="timerWidget" onclick="toggleTimerPopover(event)">
+            <span id="timerDisplay">⏱ —</span>
+            <div class="timer-popover" id="timerPopover">
+                <label>Timer-typ</label>
+                <select id="timerType" onchange="onTimerTypeChange()">
+                    <option value="pomodoro">⏱ Pomodoro (25 min)</option>
+                    <option value="countdown">⏲ Nedräkning</option>
+                    <option value="session">⏳ Skrivsession</option>
+                </select>
+                <label>Tid (minuter)</label>
+                <div class="pop-row">
+                    <input type="number" id="timerMinutes" value="25" min="1" max="180" />
+                    <span style="font-size:0.7rem;color:var(--text-dim)">min</span>
+                </div>
+                <div class="check-row">
+                    <input type="checkbox" id="timerShowDigits" checked />
+                    <span>Visa siffror</span>
+                </div>
+                <div class="pop-row">
+                    <button class="pop-btn primary" onclick="startTimer()">▶ Starta</button>
+                    <button class="pop-btn" onclick="pauseTimer()">⏸ Paus</button>
+                    <button class="pop-btn" onclick="stopTimer()">⏹ Stopp</button>
+                </div>
+                <hr>
+                <label>Skrivmål</label>
+                <div class="pop-row">
+                    <select id="goalType" style="width:auto">
+                        <option value="words">Ord</option>
+                        <option value="chars">Tecken</option>
+                    </select>
+                    <input type="number" id="goalTarget" value="500" min="10" max="100000" />
+                </div>
+                <div class="pop-row">
+                    <button class="pop-btn primary" onclick="setWritingGoal()">Sätt mål</button>
+                    <button class="pop-btn" onclick="clearWritingGoal()">Nollställ</button>
+                </div>
+            </div>
+        </div>
         <div class="status-item" id="statusDocs">0 dokument</div>
     </div>
 
@@ -1341,6 +1576,7 @@
     <div class="fullscreen-overlay" id="fullscreenOverlay">
         <div class="fs-header">
             <span class="fs-title" id="fsTitle">Dokument</span>
+            <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
                 <div class="fs-width-control tooltip-wrap" data-tip="Kolumnbredd">
                     <label>Bredd</label>
@@ -1365,6 +1601,7 @@
             </div>
         </div>
         <div class="fs-word-count" id="fsWordCount">0 ord</div>
+        <div class="fs-goal-line" id="fsGoalLine"><div class="fs-goal-fill-line" id="fsGoalFillLine"></div></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
@@ -2146,6 +2383,231 @@
         }
 
         // ═══════════════════════════════════════════════
+        //  Timer & Writing Goals
+        // ═══════════════════════════════════════════════
+
+        const TIMER_KEY = 'skrivbord_timer';
+        const GOAL_KEY = 'skrivbord_goal';
+        let timerInterval = null;
+
+        function loadTimerState() {
+            try { return JSON.parse(localStorage.getItem(TIMER_KEY)) || {}; } catch { return {}; }
+        }
+        function saveTimerState(s) { localStorage.setItem(TIMER_KEY, JSON.stringify(s)); }
+        function loadGoalState() {
+            try { return JSON.parse(localStorage.getItem(GOAL_KEY)) || {}; } catch { return {}; }
+        }
+        function saveGoalState(s) { localStorage.setItem(GOAL_KEY, JSON.stringify(s)); }
+
+        function toggleTimerPopover(e) {
+            e.stopPropagation();
+            const pop = document.getElementById('timerPopover');
+            pop.classList.toggle('open');
+        }
+
+        // Close popover on outside click
+        document.addEventListener('click', (e) => {
+            const pop = document.getElementById('timerPopover');
+            if (pop && !pop.contains(e.target) && !e.target.closest('#timerWidget')) {
+                pop.classList.remove('open');
+            }
+        });
+
+        // Stop click inside popover from closing it
+        document.getElementById('timerPopover').addEventListener('click', (e) => e.stopPropagation());
+
+        function onTimerTypeChange() {
+            const type = document.getElementById('timerType').value;
+            const minInput = document.getElementById('timerMinutes');
+            if (type === 'pomodoro') {
+                minInput.value = 25;
+                minInput.disabled = false;
+            } else if (type === 'session') {
+                minInput.value = '';
+                minInput.disabled = true;
+            } else {
+                minInput.disabled = false;
+            }
+        }
+
+        function startTimer() {
+            const type = document.getElementById('timerType').value;
+            const minutes = parseInt(document.getElementById('timerMinutes').value) || 25;
+            const showDigits = document.getElementById('timerShowDigits').checked;
+
+            const state = {
+                type,
+                startTime: Date.now(),
+                duration: type === 'session' ? null : minutes * 60 * 1000,
+                running: true,
+                showDigits,
+                paused: false,
+                elapsed: 0
+            };
+            saveTimerState(state);
+            beginTimerTick();
+            document.getElementById('timerPopover').classList.remove('open');
+        }
+
+        function pauseTimer() {
+            const state = loadTimerState();
+            if (!state.running) return;
+            state.paused = true;
+            state.elapsed = Date.now() - state.startTime;
+            state.running = false;
+            saveTimerState(state);
+            clearInterval(timerInterval);
+            renderTimerDisplay(state);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            localStorage.removeItem(TIMER_KEY);
+            document.getElementById('timerDisplay').textContent = '⏱ —';
+            const fsTd = document.getElementById('fsTimerDisplay');
+            if (fsTd) { fsTd.textContent = ''; fsTd.classList.remove('running'); }
+            document.title = document.title.replace(/^⏱.*— /, '');
+            document.getElementById('timerPopover').classList.remove('open');
+        }
+
+        function beginTimerTick() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const state = loadTimerState();
+                if (!state.running) { clearInterval(timerInterval); return; }
+                renderTimerDisplay(state);
+            }, 1000);
+            renderTimerDisplay(loadTimerState());
+        }
+
+        function renderTimerDisplay(state) {
+            if (!state || !state.startTime) return;
+
+            const elapsed = state.paused ? state.elapsed : Date.now() - state.startTime;
+            let display = '';
+            let finished = false;
+
+            if (state.type === 'session') {
+                // Count up
+                const secs = Math.floor(elapsed / 1000);
+                display = formatTime(secs);
+            } else {
+                // Count down
+                const remaining = Math.max(0, state.duration - elapsed);
+                const secs = Math.ceil(remaining / 1000);
+                display = formatTime(secs);
+                if (remaining <= 0) {
+                    finished = true;
+                    playAlarm();
+                    stopTimer();
+                    document.getElementById('timerDisplay').textContent = '⏱ 0:00 ✓';
+                    return;
+                }
+            }
+
+            const icon = state.paused ? '⏸' : '⏱';
+            const label = state.showDigits ? `${icon} ${display}` : `${icon} ●`;
+            document.getElementById('timerDisplay').innerHTML =
+                `<span class="${state.running ? 'timer-running' : ''}">${label}</span>`;
+
+            // Fullscreen display
+            const fsTd = document.getElementById('fsTimerDisplay');
+            if (fsTd) {
+                fsTd.textContent = state.showDigits ? display : '●';
+                fsTd.classList.toggle('running', state.running);
+            }
+
+            // Tab title
+            const baseTitle = document.title.replace(/^⏱.*— /, '');
+            if (state.showDigits && state.running) {
+                document.title = `⏱ ${display} — ${baseTitle}`;
+            }
+        }
+
+        function formatTime(totalSecs) {
+            const m = Math.floor(totalSecs / 60);
+            const s = totalSecs % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function playAlarm() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [0, 0.2, 0.4].forEach(delay => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 880;
+                    osc.type = 'sine';
+                    gain.gain.value = 0.15;
+                    osc.start(ctx.currentTime + delay);
+                    osc.stop(ctx.currentTime + delay + 0.12);
+                });
+            } catch (e) {}
+        }
+
+        // ── Writing Goals ──
+
+        function setWritingGoal() {
+            const type = document.getElementById('goalType').value;
+            const target = parseInt(document.getElementById('goalTarget').value) || 500;
+            const state = { type, target, active: true };
+            saveGoalState(state);
+            document.getElementById('goalWidget').style.display = 'flex';
+            updateGoalProgress();
+            document.getElementById('timerPopover').classList.remove('open');
+        }
+
+        function clearWritingGoal() {
+            localStorage.removeItem(GOAL_KEY);
+            document.getElementById('goalWidget').style.display = 'none';
+            document.getElementById('goalFill').style.width = '0%';
+            document.getElementById('goalFill').className = 'goal-fill';
+            document.getElementById('goalDisplay').textContent = '—';
+            const fsLine = document.getElementById('fsGoalFillLine');
+            if (fsLine) { fsLine.style.width = '0%'; fsLine.className = 'fs-goal-fill-line'; }
+            document.getElementById('timerPopover').classList.remove('open');
+        }
+
+        function updateGoalProgress() {
+            const goal = loadGoalState();
+            if (!goal || !goal.active) return;
+
+            // Get content from active textarea
+            const content = isFullscreen
+                ? document.getElementById('fsTextarea').value
+                : document.getElementById('editorTextarea').value;
+
+            let current = 0;
+            if (goal.type === 'words') {
+                current = content.trim() === '' ? 0 : content.trim().split(/\s+/).length;
+            } else {
+                current = content.length;
+            }
+
+            const pct = Math.min(100, Math.round((current / goal.target) * 100));
+            const unit = goal.type === 'words' ? 'ord' : 'tecken';
+
+            // Status bar
+            const fill = document.getElementById('goalFill');
+            fill.style.width = pct + '%';
+            fill.className = 'goal-fill' + (pct >= 100 ? ' done' : pct >= 75 ? ' progress-75' : '');
+            document.getElementById('goalDisplay').textContent = `${current}/${goal.target} ${unit}`;
+
+            // Fullscreen bar
+            const fsLine = document.getElementById('fsGoalFillLine');
+            if (fsLine) {
+                fsLine.style.width = pct + '%';
+                fsLine.className = 'fs-goal-fill-line' + (pct >= 100 ? ' done' : pct >= 75 ? ' progress-75' : '');
+            }
+        }
+
+        // Hook goal updates to both textareas
+        document.getElementById('editorTextarea').addEventListener('input', updateGoalProgress);
+        document.getElementById('fsTextarea').addEventListener('input', updateGoalProgress);
+
+        // ═══════════════════════════════════════════════
         //  Initialize
         // ═══════════════════════════════════════════════
 
@@ -2175,6 +2637,23 @@
             });
             if (!document.querySelector('#highlightSwatches .color-swatch.active') && swatches.length) {
                 swatches[0].classList.add('active');
+            }
+
+            // Resume timer if running
+            const timerState = loadTimerState();
+            if (timerState.running) {
+                beginTimerTick();
+            } else if (timerState.paused) {
+                renderTimerDisplay(timerState);
+            }
+
+            // Resume goal
+            const goalState = loadGoalState();
+            if (goalState && goalState.active) {
+                document.getElementById('goalWidget').style.display = 'flex';
+                document.getElementById('goalType').value = goalState.type || 'words';
+                document.getElementById('goalTarget').value = goalState.target || 500;
+                updateGoalProgress();
             }
         })();
     </script>
