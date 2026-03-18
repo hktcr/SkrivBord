@@ -2075,9 +2075,14 @@
             const cursorPos = ta.selectionStart;
             const linesBefore = text.substring(0, cursorPos).split('\n').length - 1;
 
-            // Get line height from computed style
+            // Get line height from computed style (handle unitless + px)
             const style = window.getComputedStyle(ta);
-            const lineHeight = parseFloat(style.lineHeight) || 28;
+            let lineHeight = parseFloat(style.lineHeight);
+            if (style.lineHeight.indexOf('px') === -1 || isNaN(lineHeight) || lineHeight < 5) {
+                // lineHeight is unitless (e.g. 1.85) — multiply by font size
+                const fontSize = parseFloat(style.fontSize) || 16;
+                lineHeight = (parseFloat(style.lineHeight) || 1.85) * fontSize;
+            }
             const paddingTop = parseFloat(style.paddingTop) || 80;
 
             // Absolute position of the cursor line within the full document
