@@ -1292,6 +1292,7 @@
         <div class="fs-header">
             <span class="fs-title" id="fsTitle">Dokument</span>
             <div class="fs-actions">
+                <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="exitFullscreen()">✕ Stäng</button>
             </div>
@@ -1880,10 +1881,13 @@
             typewriterEnabled = settings.typewriter || false;
             highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
             const container = document.getElementById('fsEditorContainer');
+            const btnCenter = document.getElementById('btnCenterScroll');
             if (typewriterEnabled) {
                 container.classList.add('typewriter-active');
+                if (btnCenter) btnCenter.style.display = 'inline-block';
             } else {
                 container.classList.remove('typewriter-active');
+                if (btnCenter) btnCenter.style.display = 'none';
             }
             document.getElementById('fsLineHighlight').style.background = highlightColor;
 
@@ -1928,17 +1932,17 @@
             clearTimeout(saveTimer);
             saveTimer = setTimeout(() => saveDocs(), 500);
 
-            updateLineHighlight();
+            updateLineHighlight(true);
         });
 
-        document.getElementById('fsTextarea').addEventListener('click', updateLineHighlight);
+        document.getElementById('fsTextarea').addEventListener('click', () => updateLineHighlight(true));
         document.getElementById('fsTextarea').addEventListener('keyup', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', 'Backspace', 'Delete'].includes(e.key)) {
-                updateLineHighlight();
+                updateLineHighlight(true);
             }
         });
 
-        document.getElementById('fsTextarea').addEventListener('scroll', updateLineHighlight);
+        document.getElementById('fsTextarea').addEventListener('scroll', () => updateLineHighlight(false));
 
         // Tab in fullscreen
         document.getElementById('fsTextarea').addEventListener('keydown', (e) => {
@@ -1962,7 +1966,7 @@
         //  Typewriter Mode — Line Highlight
         // ═══════════════════════════════════════════════
 
-        function updateLineHighlight() {
+        function updateLineHighlight(autoScroll = false) {
             if (!isFullscreen || !typewriterEnabled) return;
 
             const ta = document.getElementById('fsTextarea');
@@ -1978,15 +1982,17 @@
             const lineHeight = parseFloat(style.lineHeight);
             const paddingTop = parseFloat(style.paddingTop);
 
-            // Typewriter scroll: keep cursor line at vertical center
+            // Typewriter scroll: keep cursor line at vertical center (only if autoScroll is true)
             const viewportHeight = ta.clientHeight;
-            const centerY = viewportHeight / 2;
             const absoluteLineTop = paddingTop + (linesBefore * lineHeight);
-            const targetScroll = absoluteLineTop - centerY + (lineHeight / 2);
+            
+            if (autoScroll) {
+                const centerY = viewportHeight / 2;
+                const targetScroll = absoluteLineTop - centerY + (lineHeight / 2);
+                ta.scrollTop = Math.max(0, targetScroll);
+            }
 
-            ta.scrollTop = Math.max(0, targetScroll);
-
-            // Position highlight at the center of the viewport
+            // Position highlight at the center of the viewport based on current scroll position
             const visibleTop = absoluteLineTop - ta.scrollTop;
 
             highlight.style.top = visibleTop + 'px';
