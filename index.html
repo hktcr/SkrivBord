@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkrivBord — Markdown Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --app-bg: #1a1b1e;
+            --surface: #25262b;
+            --surface-hover: #2c2e33;
+            --surface-active: #373a40;
+            --border: #373a40;
+            --border-light: #2c2e33;
+            --text: #c1c2c5;
+            --text-bright: #e9ecef;
+            --text-muted: #909296;
+            --accent: #7c5cbf;
+            --accent-light: #9775d0;
+            --accent-glow: rgba(124, 92, 191, 0.15);
+            --danger: #e03131;
+            --success: #40c057;
+            --radius: 8px;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-serif: 'Merriweather', Georgia, serif;
+            --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            --transition: 0.15s ease;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--app-bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── TOOLBAR ── */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 50;
+        }
+
+        .toolbar-brand {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            letter-spacing: -0.02em;
+            margin-right: 6px;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .toolbar-brand span {
+            font-weight: 300;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .toolbar-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .tb-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.73rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+
+        .tb-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--text-muted);
+            color: var(--text-bright);
+        }
+
+        .tb-btn.accent {
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        .tb-btn.accent:hover {
+            background: var(--accent-glow);
+        }
+
+        .tb-btn .icon {
+            font-size: 0.85rem;
+        }
+
+        .toolbar-spacer {
+            flex: 1;
+        }
+
+        .copy-feedback {
+            font-size: 0.7rem;
+            color: var(--success);
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .copy-feedback.show {
+            opacity: 1;
+        }
+
+        /* ── TAB BAR ── */
+        .tab-bar {
+            display: flex;
+            align-items: flex-end;
+            background: var(--app-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 0 8px;
+            gap: 2px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tab-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px 7px 14px;
+            background: var(--app-bg);
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            transition: all var(--transition);
+            max-width: 180px;
+            user-select: none;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: var(--text);
+            background: var(--surface-hover);
+        }
+
+        .tab.active {
+            background: var(--surface);
+            color: var(--text-bright);
+            font-weight: 500;
+            border-color: var(--border);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--surface);
+        }
+
+        .tab.modified .tab-name::after {
+            content: ' •';
+            color: var(--accent-light);
+        }
+
+        .tab-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tab-close {
+            opacity: 0;
+            font-size: 0.85rem;
+            line-height: 1;
+            padding: 1px 3px;
+            border-radius: 3px;
+            transition: all var(--transition);
+            flex-shrink: 0;
+        }
+
+        .tab:hover .tab-close,
+        .tab.active .tab-close {
+            opacity: 0.5;
+        }
+
+        .tab-close:hover {
+            opacity: 1 !important;
+            background: rgba(224, 49, 49, 0.15);
+            color: var(--danger);
+        }
+
+        .tab-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            margin-bottom: 3px;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 1rem;
+            transition: all var(--transition);
+            flex-shrink: 0;
+        }
+
+        .tab-new:hover {
+            border-color: var(--accent);
+            color: var(--accent-light);
+            background: var(--accent-glow);
+        }
+
+        /* ── EDITOR AREA ── */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid var(--border);
+        }
+
+        .editor-pane.hidden {
+            display: none;
+        }
+
+        .pane-label {
+            padding: 4px 12px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-light);
+            user-select: none;
+        }
+
+        .editor-textarea {
+            flex: 1;
+            width: 100%;
+            padding: 20px 24px;
+            border: none;
+            resize: none;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-bright);
+            background: var(--app-bg);
+            outline: none;
+            tab-size: 4;
+        }
+
+        .editor-textarea::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .preview-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .preview-pane.hidden {
+            display: none;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+            background: var(--app-bg);
+        }
+
+        .preview-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .preview-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .preview-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        /* ── PREVIEW TYPOGRAPHY ── */
+        .preview-content h1 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin: 0 0 0.8em;
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.3;
+        }
+
+        .preview-content h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin: 1.5em 0 0.6em;
+            line-height: 1.3;
+        }
+
+        .preview-content h3 {
+            font-family: var(--font-sans);
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin: 1.3em 0 0.5em;
+            line-height: 1.4;
+        }
+
+        .preview-content h4 {
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 1.2em 0 0.4em;
+        }
+
+        .preview-content p {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            line-height: 1.8;
+            margin: 0 0 1em;
+            color: var(--text);
+            max-width: 68ch;
+        }
+
+        .preview-content strong {
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        .preview-content em {
+            font-style: italic;
+            color: var(--accent-light);
+        }
+
+        .preview-content ul, .preview-content ol {
+            margin: 0.5em 0 1em 1.5em;
+            line-height: 1.8;
+        }
+
+        .preview-content li {
+            margin-bottom: 0.25em;
+        }
+
+        .preview-content blockquote {
+            border-left: 3px solid var(--accent);
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            background: var(--accent-glow);
+            border-radius: 0 6px 6px 0;
+            font-style: italic;
+            color: var(--text);
+        }
+
+        .preview-content code {
+            font-family: var(--font-mono);
+            font-size: 0.88em;
+            background: var(--surface);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            color: var(--accent-light);
+        }
+
+        .preview-content pre {
+            background: var(--surface);
+            padding: 1em 1.2em;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .preview-content pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .preview-content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2em 0;
+        }
+
+        .preview-content a {
+            color: var(--accent-light);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color var(--transition);
+        }
+
+        .preview-content a:hover {
+            border-bottom-color: var(--accent-light);
+        }
+
+        .preview-content table {
+            border-collapse: collapse;
+            margin: 1em 0;
+            width: 100%;
+        }
+
+        .preview-content th, .preview-content td {
+            border: 1px solid var(--border);
+            padding: 0.5em 0.8em;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .preview-content th {
+            background: var(--surface);
+            font-weight: 600;
+            color: var(--text-bright);
+        }
+
+        /* ── SETTINGS PANEL ── */
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.15s ease;
+        }
+
+        .settings-overlay.visible {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .settings-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px 28px;
+            width: 380px;
+            max-width: 90vw;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            animation: slideUp 0.2s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .settings-panel h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .setting-row label {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .setting-row input[type="color"] {
+            width: 36px;
+            height: 28px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+            padding: 2px;
+        }
+
+        .setting-row input[type="range"] {
+            width: 140px;
+            accent-color: var(--accent);
+        }
+
+        .setting-row .range-value {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            width: 35px;
+            text-align: right;
+            font-family: var(--font-mono);
+        }
+
+        .setting-row select {
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--app-bg);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.78rem;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+            justify-content: flex-end;
+        }
+
+        .settings-actions button {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-reset:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-close-settings {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+        }
+
+        .btn-close-settings:hover {
+            background: var(--accent-light);
+        }
+
+        /* ── VIEW MODE TOGGLE ── */
+        .view-toggle {
+            display: inline-flex;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .view-toggle button {
+            padding: 4px 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .view-toggle button:not(:last-child) {
+            border-right: 1px solid var(--border);
+        }
+
+        .view-toggle button.active {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+        }
+
+        .view-toggle button:hover:not(.active) {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+
+        /* ── DELETE CONFIRM ── */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confirm-overlay.visible {
+            display: flex;
+        }
+
+        .confirm-dialog {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px 28px;
+            width: 340px;
+            max-width: 90vw;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
+
+        .confirm-dialog p {
+            font-size: 0.85rem;
+            color: var(--text);
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .confirm-dialog .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .confirm-dialog button {
+            padding: 7px 20px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .confirm-dialog .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .confirm-dialog .btn-delete {
+            background: var(--danger);
+            border: none;
+            color: #fff;
+        }
+
+        /* ── RENAME INLINE ── */
+        .tab-rename-input {
+            background: var(--app-bg);
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            color: var(--text-bright);
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 1px 4px;
+            width: 120px;
+            outline: none;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 12px;
+            user-select: none;
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            opacity: 0.4;
+        }
+
+        .empty-state p {
+            font-size: 0.85rem;
+        }
+
+        .empty-state .hint {
+            font-size: 0.72rem;
+            color: var(--border);
+        }
+
+        .empty-state button {
+            margin-top: 8px;
+            padding: 8px 20px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .empty-state button:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        /* ── STATUS BAR ── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 3px 12px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .status-bar .status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-saved {
+            color: var(--success);
+        }
+
+        /* ── PRINT / PDF ── */
+        @media print {
+            .toolbar, .tab-bar, .status-bar, .editor-pane, .pane-label,
+            .settings-overlay, .confirm-overlay {
+                display: none !important;
+            }
+
+            html, body {
+                height: auto;
+                overflow: visible;
+                background: #fff;
+                color: #1a1a1a;
+            }
+
+            .editor-area {
+                display: block;
+                overflow: visible;
+            }
+
+            .preview-pane {
+                display: block !important;
+                overflow: visible;
+            }
+
+            .preview-content {
+                overflow: visible;
+                padding: 0;
+                max-width: 100%;
+                background: #fff;
+            }
+
+            .preview-content h1 {
+                color: #1a1a1a;
+                border-bottom-color: #ccc;
+            }
+
+            .preview-content h2, .preview-content h3, .preview-content h4 {
+                color: #1a1a1a;
+            }
+
+            .preview-content p, .preview-content li {
+                color: #333;
+            }
+
+            .preview-content strong {
+                color: #1a1a1a;
+            }
+
+            .preview-content em {
+                color: #555;
+            }
+
+            .preview-content blockquote {
+                border-left-color: #999;
+                background: #f5f5f5;
+            }
+
+            .preview-content code {
+                background: #f0f0f0;
+                color: #333;
+            }
+
+            .preview-content pre {
+                background: #f8f8f8;
+                border-color: #ddd;
+            }
+
+            .preview-content pre code {
+                color: #333;
+            }
+
+            .preview-content th { background: #f0f0f0; color: #1a1a1a; }
+            .preview-content th, .preview-content td { border-color: #ccc; }
+        }
+
+        /* ── CUSTOM TOOLTIP ── */
+        .tooltip-wrap {
+            position: relative;
+        }
+
+        .tooltip-wrap::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            background: #111;
+            color: #e9ecef;
+            font-size: 0.68rem;
+            font-weight: 400;
+            font-family: var(--font-sans);
+            border-radius: 5px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease 0.35s;
+            z-index: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            letter-spacing: 0;
+        }
+
+        .tooltip-wrap:hover::after {
+            opacity: 1;
+        }
+
+        /* ── FULLSCREEN / FOCUS MODE ── */
+        .fullscreen-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            flex-direction: column;
+            background: var(--app-bg);
+        }
+
+        .fullscreen-overlay.visible {
+            display: flex;
+        }
+
+        .fs-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            opacity: 0.35;
+            transition: opacity 0.3s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1010;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+            pointer-events: auto;
+        }
+
+        .fs-header:hover {
+            opacity: 1;
+        }
+
+        .fs-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .fs-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .fs-btn {
+            padding: 4px 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .fs-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-bright);
+        }
+
+        .fs-editor-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .fs-editor-container {
+            width: 100%;
+            max-width: 72ch;
+            height: 100%;
+            position: relative;
+        }
+
+        .fs-textarea {
+            width: 100%;
+            height: 100%;
+            padding: 80px 32px 40vh;
+            border: none;
+            resize: none;
+            font-family: var(--font-mono);
+            font-size: 16px;
+            line-height: 1.85;
+            color: var(--text-bright);
+            background: transparent;
+            outline: none;
+            tab-size: 4;
+            position: relative;
+            z-index: 2;
+            caret-color: var(--accent-light);
+            overflow-y: scroll;
+            scrollbar-width: none;
+        }
+
+        .fs-textarea::-webkit-scrollbar {
+            display: none;
+        }
+
+        .fs-textarea::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ── TYPEWRITER MODE ── */
+        .fs-line-highlight {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1.85em;
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 1;
+            transition: top 0.08s ease, background 0.2s ease;
+            display: none;
+        }
+
+        .typewriter-active .fs-line-highlight {
+            display: block;
+        }
+
+        .fs-word-count {
+            position: absolute;
+            bottom: 12px;
+            right: 16px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1010;
+        }
+
+        .fullscreen-overlay:hover .fs-word-count {
+            opacity: 0.7;
+        }
+
+        /* Typewriter toggle in settings */
+        .setting-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-track {
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .toggle-track.active {
+            background: var(--accent);
+        }
+
+        .toggle-track.active::after {
+            transform: translateX(16px);
+            background: #fff;
+        }
+
+        .setting-section-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-top: 12px;
+            margin-bottom: 8px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        /* Color swatches for highlight */
+        .color-swatches {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .color-swatch.active {
+            border-color: var(--text-bright);
+            box-shadow: 0 0 8px rgba(255,255,255,0.2);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 700px) {
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .editor-area {
+                flex-direction: column;
+            }
+
+            .editor-pane {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+
+        @media print {
+            .fullscreen-overlay {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+        <div class="toolbar-brand">✏️ SkrivBord</div>
+        <div class="toolbar-sep"></div>
+
+        <div class="view-toggle">
+            <button id="viewBoth" class="active tooltip-wrap" data-tip="Split-vy: editor + preview" onclick="setViewMode('both')">⬒</button>
+            <button id="viewEditor" class="tooltip-wrap" data-tip="Enbart editor" onclick="setViewMode('editor')">✎</button>
+            <button id="viewPreview" class="tooltip-wrap" data-tip="Enbart förhandsgranskning" onclick="setViewMode('preview')">◉</button>
+        </div>
+
+        <div class="toolbar-sep"></div>
+
+        <button class="tb-btn tooltip-wrap" data-tip="Kopiera markdown till clipboard (⌘⇧C)" onclick="copyMarkdown()">
+            <span class="icon">📋</span> Kopiera
+        </button>
+        <span id="copyFeedback" class="copy-feedback">✓ Kopierat!</span>
+
+        <div class="toolbar-sep"></div>
+
+        <button class="tb-btn tooltip-wrap" data-tip="Ladda ner som textfil" onclick="exportTxt()">
+            <span class="icon">📄</span> .txt
+        </button>
+        <button class="tb-btn tooltip-wrap" data-tip="Exportera som PDF via utskrift (⌘P)" onclick="exportPdf()">
+            <span class="icon">🖨️</span> .pdf
+        </button>
+
+        <div class="toolbar-sep"></div>
+
+        <button class="tb-btn tooltip-wrap" data-tip="Distraktionsfritt skrivläge (⌘↵)" onclick="enterFullscreen()">
+            <span class="icon">🖥</span> Fokus
+        </button>
+
+        <div class="toolbar-spacer"></div>
+
+        <button class="tb-btn accent tooltip-wrap" data-tip="Anpassa färger, storlek och typsnitt" onclick="openSettings()">
+            <span class="icon">⚙</span> Utseende
+        </button>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar" id="tabBar">
+        <div class="tab-new tooltip-wrap" data-tip="Nytt dokument (⌘N)" onclick="createNewDoc()">+</div>
+    </div>
+
+    <!-- EDITOR AREA -->
+    <div class="editor-area" id="editorArea">
+        <div class="editor-pane" id="editorPane">
+            <div class="pane-label">EDITOR</div>
+            <textarea
+                id="editorTextarea"
+                class="editor-textarea"
+                placeholder="Skriv markdown här…"
+                spellcheck="true"
+            ></textarea>
+        </div>
+        <div class="preview-pane" id="previewPane">
+            <div class="pane-label">FÖRHANDSGRANSKNING</div>
+            <div class="preview-content" id="previewContent"></div>
+        </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="icon">✏️</div>
+        <p>Inget dokument öppet</p>
+        <p class="hint">Skapa ett nytt dokument för att börja skriva</p>
+        <button onclick="createNewDoc()">Nytt dokument</button>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-item" id="statusSaved">
+            <span class="status-saved">●</span> Sparad
+        </div>
+        <div class="status-item" id="statusChars">0 tecken</div>
+        <div class="status-item" id="statusWords">0 ord</div>
+        <div class="status-item" id="statusLines">0 rader</div>
+        <div style="flex:1"></div>
+        <div class="status-item" id="statusDocs">0 dokument</div>
+    </div>
+
+    <!-- SETTINGS OVERLAY -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <h3>⚙ Utseende</h3>
+
+            <div class="setting-row">
+                <label>Bakgrundsfärg (preview)</label>
+                <input type="color" id="settBg" value="#1a1b1e">
+            </div>
+
+            <div class="setting-row">
+                <label>Textfärg (preview)</label>
+                <input type="color" id="settColor" value="#c1c2c5">
+            </div>
+
+            <div class="setting-row">
+                <label>Teckenstorlek</label>
+                <input type="range" id="settFontSize" min="12" max="28" value="16" oninput="updateFontSizeLabel()">
+                <span class="range-value" id="fontSizeLabel">16px</span>
+            </div>
+
+            <div class="setting-row">
+                <label>Brödtext-typsnitt</label>
+                <select id="settFont">
+                    <option value="serif">Serif (Merriweather)</option>
+                    <option value="sans">Sans-serif (Inter)</option>
+                    <option value="mono">Monospace</option>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <label>Editor-bakgrund</label>
+                <input type="color" id="settEditorBg" value="#1a1b1e">
+            </div>
+
+            <div class="setting-row">
+                <label>Editor-textfärg</label>
+                <input type="color" id="settEditorColor" value="#e9ecef">
+            </div>
+
+            <div class="setting-section-label">Fokusläge</div>
+
+            <div class="setting-row">
+                <label>Skrivmaskins-läge</label>
+                <div class="setting-toggle">
+                    <div class="toggle-track" id="settTypewriter" onclick="toggleTypewriterSetting()"></div>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <label>Radfärg</label>
+                <div class="color-swatches" id="highlightSwatches">
+                    <div class="color-swatch" style="background:rgba(124,92,191,0.12)" data-color="rgba(124,92,191,0.12)" onclick="setHighlightColor(this)" title="Lila"></div>
+                    <div class="color-swatch" style="background:rgba(64,192,87,0.10)" data-color="rgba(64,192,87,0.10)" onclick="setHighlightColor(this)" title="Grön"></div>
+                    <div class="color-swatch" style="background:rgba(34,139,230,0.10)" data-color="rgba(34,139,230,0.10)" onclick="setHighlightColor(this)" title="Blå"></div>
+                    <div class="color-swatch" style="background:rgba(250,176,5,0.10)" data-color="rgba(250,176,5,0.10)" onclick="setHighlightColor(this)" title="Amber"></div>
+                    <div class="color-swatch" style="background:rgba(224,49,49,0.08)" data-color="rgba(224,49,49,0.08)" onclick="setHighlightColor(this)" title="Röd"></div>
+                    <div class="color-swatch" style="background:rgba(255,255,255,0.05)" data-color="rgba(255,255,255,0.05)" onclick="setHighlightColor(this)" title="Diskret"></div>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-reset" onclick="resetSettings()">Återställ</button>
+                <button class="btn-close-settings" onclick="closeSettings()">Stäng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRM -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-dialog">
+            <p id="confirmMessage">Ta bort detta dokument?</p>
+            <div class="actions">
+                <button class="btn-cancel" onclick="closeConfirm()">Avbryt</button>
+                <button class="btn-delete" id="confirmDeleteBtn">Ta bort</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN OVERLAY -->
+    <div class="fullscreen-overlay" id="fullscreenOverlay">
+        <div class="fs-header">
+            <span class="fs-title" id="fsTitle">Dokument</span>
+            <div class="fs-actions">
+                <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
+                <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="exitFullscreen()">✕ Stäng</button>
+            </div>
+        </div>
+        <div class="fs-editor-wrap" id="fsEditorWrap">
+            <div class="fs-editor-container" id="fsEditorContainer">
+                <div class="fs-line-highlight" id="fsLineHighlight"></div>
+                <textarea
+                    id="fsTextarea"
+                    class="fs-textarea"
+                    placeholder="Skriv…"
+                    spellcheck="true"
+                ></textarea>
+            </div>
+        </div>
+        <div class="fs-word-count" id="fsWordCount">0 ord</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
+    <script>
+        // ═══════════════════════════════════════════════
+        //  SkrivBord — State & Storage
+        // ═══════════════════════════════════════════════
+
+        const STORAGE_KEY = 'skrivbord-docs';
+        const SETTINGS_KEY = 'skrivbord-settings';
+        const ACTIVE_KEY = 'skrivbord-active';
+        const VIEW_KEY = 'skrivbord-view';
+
+        let docs = [];
+        let activeDocId = null;
+        let saveTimer = null;
+        let viewMode = localStorage.getItem(VIEW_KEY) || 'both';
+
+        // Default settings
+        let isFullscreen = false;
+        let typewriterEnabled = false;
+        let highlightColor = 'rgba(124,92,191,0.12)';
+
+        const DEFAULT_SETTINGS = {
+            previewBg: '#1a1b1e',
+            previewColor: '#c1c2c5',
+            fontSize: 16,
+            fontFamily: 'serif',
+            editorBg: '#1a1b1e',
+            editorColor: '#e9ecef',
+            typewriter: false,
+            highlightColor: 'rgba(124,92,191,0.12)'
+        };
+
+        function loadDocs() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                docs = raw ? JSON.parse(raw) : [];
+            } catch {
+                docs = [];
+            }
+        }
+
+        function saveDocs() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+        }
+
+        function loadSettings() {
+            try {
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+            } catch {
+                return { ...DEFAULT_SETTINGS };
+            }
+        }
+
+        function saveSettings(settings) {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
+
+        function getActiveDoc() {
+            return docs.find(d => d.id === activeDocId) || null;
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Document Management
+        // ═══════════════════════════════════════════════
+
+        function createNewDoc() {
+            const id = 'doc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const docNum = docs.length + 1;
+            const doc = {
+                id,
+                title: `Dokument ${docNum}`,
+                content: '',
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            docs.push(doc);
+            saveDocs();
+            setActiveDoc(id);
+            renderTabs();
+            updateDocCount();
+
+            // Focus the editor
+            setTimeout(() => {
+                document.getElementById('editorTextarea').focus();
+            }, 50);
+        }
+
+        function deleteDoc(id) {
+            const doc = docs.find(d => d.id === id);
+            if (!doc) return;
+
+            document.getElementById('confirmMessage').textContent =
+                `Ta bort "${doc.title}"? Detta kan inte ångras.`;
+
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            deleteBtn.onclick = () => {
+                docs = docs.filter(d => d.id !== id);
+                saveDocs();
+
+                if (activeDocId === id) {
+                    activeDocId = docs.length > 0 ? docs[docs.length - 1].id : null;
+                    localStorage.setItem(ACTIVE_KEY, activeDocId || '');
+                }
+
+                renderTabs();
+                renderActiveDoc();
+                updateDocCount();
+                closeConfirm();
+            };
+
+            document.getElementById('confirmOverlay').classList.add('visible');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('visible');
+        }
+
+        function setActiveDoc(id) {
+            activeDocId = id;
+            localStorage.setItem(ACTIVE_KEY, id || '');
+            renderTabs();
+            renderActiveDoc();
+        }
+
+        function renderActiveDoc() {
+            const doc = getActiveDoc();
+            const editorArea = document.getElementById('editorArea');
+            const emptyState = document.getElementById('emptyState');
+            const textarea = document.getElementById('editorTextarea');
+            const statusBar = document.getElementById('statusBar');
+
+            if (!doc) {
+                editorArea.style.display = 'none';
+                emptyState.style.display = 'flex';
+                statusBar.style.display = 'none';
+                document.title = 'SkrivBord';
+                return;
+            }
+
+            editorArea.style.display = 'flex';
+            emptyState.style.display = 'none';
+            statusBar.style.display = 'flex';
+
+            textarea.value = doc.content;
+            document.title = `${doc.title} — SkrivBord`;
+
+            renderPreview(doc.content);
+            updateStats(doc.content);
+            applySettings();
+            setViewMode(viewMode);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Tab Rendering
+        // ═══════════════════════════════════════════════
+
+        function renderTabs() {
+            const bar = document.getElementById('tabBar');
+            const newBtn = bar.querySelector('.tab-new');
+
+            // Remove old tabs
+            bar.querySelectorAll('.tab').forEach(t => t.remove());
+
+            docs.forEach(doc => {
+                const tab = document.createElement('div');
+                tab.className = 'tab' + (doc.id === activeDocId ? ' active' : '');
+                tab.dataset.id = doc.id;
+
+                const name = document.createElement('span');
+                name.className = 'tab-name';
+                name.textContent = doc.title;
+                name.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    startRenameTab(doc.id, tab);
+                });
+
+                const close = document.createElement('span');
+                close.className = 'tab-close';
+                close.textContent = '×';
+                close.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteDoc(doc.id);
+                });
+
+                tab.appendChild(name);
+                tab.appendChild(close);
+                tab.addEventListener('click', () => setActiveDoc(doc.id));
+
+                bar.insertBefore(tab, newBtn);
+            });
+        }
+
+        function startRenameTab(docId, tabEl) {
+            const doc = docs.find(d => d.id === docId);
+            if (!doc) return;
+
+            const nameSpan = tabEl.querySelector('.tab-name');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'tab-rename-input';
+            input.value = doc.title;
+
+            nameSpan.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const finishRename = () => {
+                const newTitle = input.value.trim() || doc.title;
+                doc.title = newTitle;
+                doc.modified = new Date().toISOString();
+                saveDocs();
+                renderTabs();
+                if (doc.id === activeDocId) {
+                    document.title = `${doc.title} — SkrivBord`;
+                }
+            };
+
+            input.addEventListener('blur', finishRename);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { input.blur(); }
+                if (e.key === 'Escape') {
+                    input.value = doc.title;
+                    input.blur();
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Preview Rendering
+        // ═══════════════════════════════════════════════
+
+        function renderPreview(content) {
+            const container = document.getElementById('previewContent');
+            if (!content || content.trim() === '') {
+                container.innerHTML = '<p style="color:var(--text-muted);font-style:italic;">Börja skriva i editorn…</p>';
+                return;
+            }
+            container.innerHTML = marked.parse(content);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Editor Events
+        // ═══════════════════════════════════════════════
+
+        document.getElementById('editorTextarea').addEventListener('input', (e) => {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            doc.content = e.target.value;
+            doc.modified = new Date().toISOString();
+
+            renderPreview(doc.content);
+            updateStats(doc.content);
+
+            // Mark as unsaved
+            document.getElementById('statusSaved').innerHTML =
+                '<span style="color:var(--accent-light)">●</span> Ändrad…';
+
+            // Debounced save
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                saveDocs();
+                document.getElementById('statusSaved').innerHTML =
+                    '<span class="status-saved">●</span> Sparad';
+            }, 500);
+        });
+
+        // Tab support in textarea
+        document.getElementById('editorTextarea').addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const ta = e.target;
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
+                ta.selectionStart = ta.selectionEnd = start + 4;
+                ta.dispatchEvent(new Event('input'));
+            }
+        });
+
+        // ═══════════════════════════════════════════════
+        //  Stats
+        // ═══════════════════════════════════════════════
+
+        function updateStats(content) {
+            const chars = content.length;
+            const words = content.trim() === '' ? 0 : content.trim().split(/\s+/).length;
+            const lines = content.split('\n').length;
+
+            document.getElementById('statusChars').textContent = `${chars} tecken`;
+            document.getElementById('statusWords').textContent = `${words} ord`;
+            document.getElementById('statusLines').textContent = `${lines} rader`;
+        }
+
+        function updateDocCount() {
+            document.getElementById('statusDocs').textContent = `${docs.length} dokument`;
+        }
+
+        // ═══════════════════════════════════════════════
+        //  View Mode
+        // ═══════════════════════════════════════════════
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            localStorage.setItem(VIEW_KEY, mode);
+
+            const editorPane = document.getElementById('editorPane');
+            const previewPane = document.getElementById('previewPane');
+
+            // Reset
+            editorPane.classList.remove('hidden');
+            previewPane.classList.remove('hidden');
+
+            if (mode === 'editor') {
+                previewPane.classList.add('hidden');
+            } else if (mode === 'preview') {
+                editorPane.classList.add('hidden');
+            }
+
+            // Toggle buttons
+            document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+            document.getElementById('view' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Settings
+        // ═══════════════════════════════════════════════
+
+        function openSettings() {
+            const settings = loadSettings();
+            document.getElementById('settBg').value = settings.previewBg;
+            document.getElementById('settColor').value = settings.previewColor;
+            document.getElementById('settFontSize').value = settings.fontSize;
+            document.getElementById('settFont').value = settings.fontFamily;
+            document.getElementById('settEditorBg').value = settings.editorBg;
+            document.getElementById('settEditorColor').value = settings.editorColor;
+            updateFontSizeLabel();
+            document.getElementById('settingsOverlay').classList.add('visible');
+
+            // Live preview
+            const inputs = ['settBg', 'settColor', 'settFontSize', 'settFont', 'settEditorBg', 'settEditorColor'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', liveApplySettings);
+                document.getElementById(id).addEventListener('change', liveApplySettings);
+            });
+        }
+
+        function liveApplySettings() {
+            const settings = {
+                previewBg: document.getElementById('settBg').value,
+                previewColor: document.getElementById('settColor').value,
+                fontSize: parseInt(document.getElementById('settFontSize').value),
+                fontFamily: document.getElementById('settFont').value,
+                editorBg: document.getElementById('settEditorBg').value,
+                editorColor: document.getElementById('settEditorColor').value
+            };
+            saveSettings(settings);
+            applySettings();
+            updateFontSizeLabel();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsOverlay').classList.remove('visible');
+        }
+
+        function resetSettings() {
+            saveSettings(DEFAULT_SETTINGS);
+            document.getElementById('settBg').value = DEFAULT_SETTINGS.previewBg;
+            document.getElementById('settColor').value = DEFAULT_SETTINGS.previewColor;
+            document.getElementById('settFontSize').value = DEFAULT_SETTINGS.fontSize;
+            document.getElementById('settFont').value = DEFAULT_SETTINGS.fontFamily;
+            document.getElementById('settEditorBg').value = DEFAULT_SETTINGS.editorBg;
+            document.getElementById('settEditorColor').value = DEFAULT_SETTINGS.editorColor;
+            updateFontSizeLabel();
+            applySettings();
+        }
+
+        function updateFontSizeLabel() {
+            document.getElementById('fontSizeLabel').textContent =
+                document.getElementById('settFontSize').value + 'px';
+        }
+
+        function applySettings() {
+            const settings = loadSettings();
+            const preview = document.getElementById('previewContent');
+            const textarea = document.getElementById('editorTextarea');
+
+            preview.style.background = settings.previewBg;
+            preview.style.color = settings.previewColor;
+            preview.style.fontSize = settings.fontSize + 'px';
+
+            // Font family mapping
+            const fontMap = {
+                serif: 'var(--font-serif)',
+                sans: 'var(--font-sans)',
+                mono: 'var(--font-mono)'
+            };
+            // Apply to paragraphs and lists
+            preview.querySelectorAll('p, li, blockquote').forEach(el => {
+                el.style.fontFamily = fontMap[settings.fontFamily] || fontMap.serif;
+                el.style.fontSize = settings.fontSize + 'px';
+                el.style.color = settings.previewColor;
+            });
+
+            // Editor styling
+            textarea.style.background = settings.editorBg;
+            textarea.style.color = settings.editorColor;
+
+            // Also style the preview pane background
+            document.getElementById('previewPane').querySelector('.pane-label + .preview-content') ||
+            (document.querySelector('.preview-content').style.background = settings.previewBg);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Copy & Export
+        // ═══════════════════════════════════════════════
+
+        async function copyMarkdown() {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            try {
+                await navigator.clipboard.writeText(doc.content);
+                const feedback = document.getElementById('copyFeedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 2000);
+            } catch {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = doc.content;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                const feedback = document.getElementById('copyFeedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 2000);
+            }
+        }
+
+        function exportTxt() {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            const blob = new Blob([doc.content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (doc.title || 'dokument') + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportPdf() {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            // Ensure preview is visible for printing
+            const previewPane = document.getElementById('previewPane');
+            const wasHidden = previewPane.classList.contains('hidden');
+            if (wasHidden) previewPane.classList.remove('hidden');
+
+            window.print();
+
+            // Restore view
+            if (wasHidden) previewPane.classList.add('hidden');
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Keyboard Shortcuts
+        // ═══════════════════════════════════════════════
+
+        document.addEventListener('keydown', (e) => {
+            const isCmd = e.metaKey || e.ctrlKey;
+
+            if (isCmd && e.key === 'n') {
+                e.preventDefault();
+                createNewDoc();
+            }
+
+            if (isCmd && e.key === 's') {
+                e.preventDefault();
+                const doc = getActiveDoc();
+                if (doc) {
+                    saveDocs();
+                    document.getElementById('statusSaved').innerHTML =
+                        '<span class="status-saved">●</span> Sparad';
+                }
+            }
+
+            if (isCmd && e.key === 'p') {
+                e.preventDefault();
+                exportPdf();
+            }
+
+            if (isCmd && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                copyMarkdown();
+            }
+
+            // Switch tabs with Cmd+1-9
+            if (isCmd && e.key >= '1' && e.key <= '9') {
+                e.preventDefault();
+                const idx = parseInt(e.key) - 1;
+                if (idx < docs.length) {
+                    setActiveDoc(docs[idx].id);
+                }
+            }
+
+            // Fullscreen toggle
+            if (isCmd && e.key === 'Enter') {
+                e.preventDefault();
+                if (isFullscreen) exitFullscreen();
+                else enterFullscreen();
+            }
+
+            // Close settings/confirm/fullscreen on Escape
+            if (e.key === 'Escape') {
+                if (isFullscreen) {
+                    exitFullscreen();
+                } else if (document.getElementById('settingsOverlay').classList.contains('visible')) {
+                    closeSettings();
+                } else if (document.getElementById('confirmOverlay').classList.contains('visible')) {
+                    closeConfirm();
+                }
+            }
+        });
+
+        // ═══════════════════════════════════════════════
+        //  Close overlay on background click
+        // ═══════════════════════════════════════════════
+
+        document.getElementById('settingsOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeSettings();
+        });
+
+        document.getElementById('confirmOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeConfirm();
+        });
+
+        // ═══════════════════════════════════════════════
+        //  Fullscreen / Focus Mode
+        // ═══════════════════════════════════════════════
+
+        function enterFullscreen() {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            isFullscreen = true;
+            const overlay = document.getElementById('fullscreenOverlay');
+            const fsTa = document.getElementById('fsTextarea');
+            const settings = loadSettings();
+
+            // Sync content
+            fsTa.value = doc.content;
+            document.getElementById('fsTitle').textContent = doc.title;
+
+            // Apply editor colors
+            const fsWrap = document.getElementById('fsEditorWrap');
+            fsWrap.style.background = settings.editorBg;
+            overlay.style.background = settings.editorBg;
+            fsTa.style.color = settings.editorColor;
+            fsTa.style.fontSize = (settings.fontSize || 16) + 'px';
+
+            // Typewriter state
+            typewriterEnabled = settings.typewriter || false;
+            highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
+            const container = document.getElementById('fsEditorContainer');
+            if (typewriterEnabled) {
+                container.classList.add('typewriter-active');
+            } else {
+                container.classList.remove('typewriter-active');
+            }
+            document.getElementById('fsLineHighlight').style.background = highlightColor;
+
+            overlay.classList.add('visible');
+            updateFsWordCount(doc.content);
+
+            setTimeout(() => {
+                fsTa.focus();
+                updateLineHighlight();
+            }, 50);
+        }
+
+        function exitFullscreen() {
+            isFullscreen = false;
+            const overlay = document.getElementById('fullscreenOverlay');
+            const fsTa = document.getElementById('fsTextarea');
+
+            // Sync content back
+            const doc = getActiveDoc();
+            if (doc) {
+                doc.content = fsTa.value;
+                doc.modified = new Date().toISOString();
+                saveDocs();
+                document.getElementById('editorTextarea').value = doc.content;
+                renderPreview(doc.content);
+                updateStats(doc.content);
+            }
+
+            overlay.classList.remove('visible');
+        }
+
+        // Fullscreen textarea events
+        document.getElementById('fsTextarea').addEventListener('input', (e) => {
+            const doc = getActiveDoc();
+            if (!doc) return;
+
+            doc.content = e.target.value;
+            doc.modified = new Date().toISOString();
+
+            updateFsWordCount(doc.content);
+
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => saveDocs(), 500);
+
+            updateLineHighlight();
+        });
+
+        document.getElementById('fsTextarea').addEventListener('click', updateLineHighlight);
+        document.getElementById('fsTextarea').addEventListener('keyup', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', 'Backspace', 'Delete'].includes(e.key)) {
+                updateLineHighlight();
+            }
+        });
+
+        document.getElementById('fsTextarea').addEventListener('scroll', updateLineHighlight);
+
+        // Tab in fullscreen
+        document.getElementById('fsTextarea').addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const ta = e.target;
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
+                ta.selectionStart = ta.selectionEnd = start + 4;
+                ta.dispatchEvent(new Event('input'));
+            }
+        });
+
+        function updateFsWordCount(content) {
+            const words = content.trim() === '' ? 0 : content.trim().split(/\s+/).length;
+            document.getElementById('fsWordCount').textContent = `${words} ord`;
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Typewriter Mode — Line Highlight
+        // ═══════════════════════════════════════════════
+
+        function updateLineHighlight() {
+            if (!isFullscreen || !typewriterEnabled) return;
+
+            const ta = document.getElementById('fsTextarea');
+            const highlight = document.getElementById('fsLineHighlight');
+
+            // Compute which line the cursor is on
+            const text = ta.value;
+            const cursorPos = ta.selectionStart;
+            const linesBefore = text.substring(0, cursorPos).split('\n').length - 1;
+
+            // Get line height from computed style
+            const style = window.getComputedStyle(ta);
+            const lineHeight = parseFloat(style.lineHeight);
+            const paddingTop = parseFloat(style.paddingTop);
+
+            // Typewriter scroll: keep cursor line at vertical center
+            const viewportHeight = ta.clientHeight;
+            const centerY = viewportHeight / 2;
+            const absoluteLineTop = paddingTop + (linesBefore * lineHeight);
+            const targetScroll = absoluteLineTop - centerY + (lineHeight / 2);
+
+            ta.scrollTop = Math.max(0, targetScroll);
+
+            // Position highlight at the center of the viewport
+            const visibleTop = absoluteLineTop - ta.scrollTop;
+
+            highlight.style.top = visibleTop + 'px';
+            highlight.style.height = lineHeight + 'px';
+            highlight.style.left = '16px';
+            highlight.style.right = '16px';
+            highlight.style.background = highlightColor;
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Typewriter Settings Helpers
+        // ═══════════════════════════════════════════════
+
+        function toggleTypewriterSetting() {
+            const track = document.getElementById('settTypewriter');
+            track.classList.toggle('active');
+            const settings = loadSettings();
+            settings.typewriter = track.classList.contains('active');
+            saveSettings(settings);
+        }
+
+        function setHighlightColor(el) {
+            document.querySelectorAll('#highlightSwatches .color-swatch').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+            const settings = loadSettings();
+            settings.highlightColor = el.dataset.color;
+            saveSettings(settings);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  Initialize
+        // ═══════════════════════════════════════════════
+
+        (function init() {
+            loadDocs();
+            activeDocId = localStorage.getItem(ACTIVE_KEY) || null;
+
+            // Validate active doc exists
+            if (activeDocId && !docs.find(d => d.id === activeDocId)) {
+                activeDocId = docs.length > 0 ? docs[0].id : null;
+            }
+
+            renderTabs();
+            renderActiveDoc();
+            updateDocCount();
+            setViewMode(viewMode);
+
+            // Load typewriter settings into UI
+            const settings = loadSettings();
+            if (settings.typewriter) {
+                document.getElementById('settTypewriter').classList.add('active');
+            }
+            // Set active highlight swatch
+            const swatches = document.querySelectorAll('#highlightSwatches .color-swatch');
+            swatches.forEach(s => {
+                if (s.dataset.color === settings.highlightColor) s.classList.add('active');
+            });
+            if (!document.querySelector('#highlightSwatches .color-swatch.active') && swatches.length) {
+                swatches[0].classList.add('active');
+            }
+        })();
+    </script>
+</body>
+
+</html>
