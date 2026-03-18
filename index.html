@@ -947,6 +947,59 @@
             color: var(--text-bright);
         }
 
+        .fs-width-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 12px;
+        }
+
+        .fs-width-control label {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .fs-width-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .fs-width-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            cursor: pointer;
+        }
+
+        .fs-width-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            cursor: pointer;
+            border: none;
+        }
+
+        .fs-width-value {
+            font-size: 11px;
+            color: var(--text-dim);
+            min-width: 40px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
         .fs-editor-wrap {
             flex: 1;
             display: flex;
@@ -1292,6 +1345,11 @@
         <div class="fs-header">
             <span class="fs-title" id="fsTitle">Dokument</span>
             <div class="fs-actions">
+                <div class="fs-width-control tooltip-wrap" data-tip="Kolumnbredd">
+                    <label>Bredd</label>
+                    <input type="range" class="fs-width-slider" id="fsWidthSlider" min="40" max="130" value="72" oninput="setFsWidth(this.value)">
+                    <span class="fs-width-value" id="fsWidthValue">72ch</span>
+                </div>
                 <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="exitFullscreen()">✕ Stäng</button>
@@ -1891,6 +1949,17 @@
             }
             document.getElementById('fsLineHighlight').style.background = highlightColor;
 
+            // Column width
+            const savedWidth = settings.fsColumnWidth || 72;
+            const container2 = document.getElementById('fsEditorContainer');
+            if (savedWidth >= 130) {
+                container2.style.maxWidth = '100%';
+            } else {
+                container2.style.maxWidth = savedWidth + 'ch';
+            }
+            document.getElementById('fsWidthSlider').value = savedWidth;
+            document.getElementById('fsWidthValue').textContent = savedWidth >= 130 ? '100%' : savedWidth + 'ch';
+
             overlay.classList.add('visible');
             updateFsWordCount(doc.content);
 
@@ -2019,6 +2088,22 @@
             el.classList.add('active');
             const settings = loadSettings();
             settings.highlightColor = el.dataset.color;
+            saveSettings(settings);
+        }
+
+        function setFsWidth(val) {
+            val = parseInt(val);
+            const container = document.getElementById('fsEditorContainer');
+            const label = document.getElementById('fsWidthValue');
+            if (val >= 130) {
+                container.style.maxWidth = '100%';
+                label.textContent = '100%';
+            } else {
+                container.style.maxWidth = val + 'ch';
+                label.textContent = val + 'ch';
+            }
+            const settings = loadSettings();
+            settings.fsColumnWidth = val;
             saveSettings(settings);
         }
 
