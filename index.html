@@ -2033,7 +2033,11 @@
             }
         });
 
-        document.getElementById('fsTextarea').addEventListener('scroll', () => updateLineHighlight(false));
+        // On manual scroll, just reposition the highlight without forcing center
+        document.getElementById('fsTextarea').addEventListener('scroll', () => {
+            if (_suppressScroll) return;
+            updateLineHighlight(false);
+        });
 
         // Tab in fullscreen
         document.getElementById('fsTextarea').addEventListener('keydown', (e) => {
@@ -2057,11 +2061,14 @@
         //  Typewriter Mode — Line Highlight
         // ═══════════════════════════════════════════════
 
+        let _suppressScroll = false;
+
         function updateLineHighlight(autoScroll = false) {
             if (!isFullscreen || !typewriterEnabled) return;
 
             const ta = document.getElementById('fsTextarea');
             const highlight = document.getElementById('fsLineHighlight');
+            if (!ta || !highlight) return;
 
             // Compute which line the cursor is on
             const text = ta.value;
@@ -2070,20 +2077,27 @@
 
             // Get line height from computed style
             const style = window.getComputedStyle(ta);
-            const lineHeight = parseFloat(style.lineHeight);
-            const paddingTop = parseFloat(style.paddingTop);
+            const lineHeight = parseFloat(style.lineHeight) || 28;
+            const paddingTop = parseFloat(style.paddingTop) || 80;
 
-            // Typewriter scroll: keep cursor line at vertical center (only if autoScroll is true)
-            const viewportHeight = ta.clientHeight;
+            // Absolute position of the cursor line within the full document
             const absoluteLineTop = paddingTop + (linesBefore * lineHeight);
-            
+
+            // Auto-scroll: center the cursor line in the viewport
             if (autoScroll) {
+                const viewportHeight = ta.clientHeight;
                 const centerY = viewportHeight / 2;
                 const targetScroll = absoluteLineTop - centerY + (lineHeight / 2);
+
+                // Suppress the scroll event caused by us setting scrollTop
+                _suppressScroll = true;
                 ta.scrollTop = Math.max(0, targetScroll);
+
+                // Release suppression after browser has settled
+                requestAnimationFrame(() => { _suppressScroll = false; });
             }
 
-            // Position highlight at the center of the viewport based on current scroll position
+            // Position highlight relative to the visible viewport
             const visibleTop = absoluteLineTop - ta.scrollTop;
 
             highlight.style.top = visibleTop + 'px';
