@@ -1365,10 +1365,75 @@
                 display: none !important;
             }
         }
+        /* ── TOAST NOTIFICATIONS ── */
+        #toastContainer {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        /* I fokusvy flyttar vi toasten ner för att vara mindre distraherande */
+        body.fullscreen-active #toastContainer {
+            top: auto;
+            bottom: 24px;
+        }
+
+        .toast {
+            background: var(--accent);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            animation: toastSlideIn 0.3s ease forwards;
+            cursor: pointer;
+        }
+
+        .toast.hiding {
+            animation: toastFadeOut 0.4s ease forwards;
+        }
+
+        .toast-action {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .toast-action:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastFadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
     </style>
 </head>
 
 <body>
+    <div id="toastContainer"></div>
+
     <!-- TOOLBAR -->
     <div class="toolbar">
         <div class="toolbar-brand">✏️ SkrivBord</div>
@@ -2431,6 +2496,11 @@
         }
 
         function startTimer() {
+            // Request Notification permission if possible
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                Notification.requestPermission();
+            }
+
             const type = document.getElementById('timerType').value;
             const minutes = parseInt(document.getElementById('timerMinutes').value) || 25;
             const showDigits = document.getElementById('timerShowDigits').checked;
@@ -2498,7 +2568,28 @@
                 display = formatTime(secs);
                 if (remaining <= 0) {
                     finished = true;
-                    playAlarm();
+                    
+                    // Respect focus mode & digits visibility for sound
+                    const shouldPlaySound = state.showDigits || !isFullscreen;
+                    if (shouldPlaySound) playAlarm();
+
+                    // Browser notification
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('⏱ Tiden ute!', { body: state.type === 'pomodoro' ? 'Dags för en paus!' : 'Din nedräkning är klar.' });
+                    }
+
+                    // Toast with optional Pomodoro action
+                    let actionLabel = null;
+                    let actionCb = null;
+                    if (state.type === 'pomodoro') {
+                        actionLabel = 'Ny runda?';
+                        actionCb = () => {
+                            document.getElementById('timerType').value = 'pomodoro';
+                            startTimer();
+                        };
+                    }
+                    showToast(`⏱ Tiden ute! ${state.type === 'pomodoro' ? '25 min pomodoro avklarad.' : ''}`, actionLabel, actionCb);
+
                     stopTimer();
                     document.getElementById('timerDisplay').textContent = '⏱ 0:00 ✓';
                     return;
@@ -2552,7 +2643,7 @@
         function setWritingGoal() {
             const type = document.getElementById('goalType').value;
             const target = parseInt(document.getElementById('goalTarget').value) || 500;
-            const state = { type, target, active: true };
+            const state = { type, target, active: true, reached: false };
             saveGoalState(state);
             document.getElementById('goalWidget').style.display = 'flex';
             updateGoalProgress();
@@ -2601,6 +2692,62 @@
                 fsLine.style.width = pct + '%';
                 fsLine.className = 'fs-goal-fill-line' + (pct >= 100 ? ' done' : pct >= 75 ? ' progress-75' : '');
             }
+
+            // Check if goal reached for the first time
+            if (pct >= 100 && !goal.reached) {
+                goal.reached = true;
+                saveGoalState(goal);
+                
+                const shouldPlaySound = true; // Goals are affirmative, always play sound
+                if (shouldPlaySound) playAlarm();
+                
+                showToast(`🎉 Skrivmålet uppnått — ${goal.target} ${unit}!`);
+            } else if (pct < 100 && goal.reached) {
+                // If they delete text and fall below goal, reset flag
+                goal.reached = false;
+                saveGoalState(goal);
+            }
+        }
+
+        // ── Toast Notifications ──
+
+        function showToast(message, actionLabel = null, actionCallback = null) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = message;
+            toast.appendChild(msgSpan);
+
+            if (actionLabel && actionCallback) {
+                const btn = document.createElement('button');
+                btn.className = 'toast-action';
+                btn.textContent = actionLabel;
+                btn.onclick = (e) => {
+                    e.stopPropagation(); // don't close immediately before action
+                    actionCallback();
+                    closeToast(toast);
+                };
+                toast.appendChild(btn);
+            }
+
+            // Click anywhere on toast to dismiss
+            toast.onclick = () => closeToast(toast);
+
+            container.appendChild(toast);
+
+            // Auto dismiss after 4.5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) closeToast(toast);
+            }, 4500);
+        }
+
+        function closeToast(toast) {
+            toast.classList.add('hiding');
+            toast.addEventListener('animationend', () => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            });
         }
 
         // Hook goal updates to both textareas
