@@ -1651,7 +1651,7 @@
                 <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
                 <button class="fs-btn tooltip-wrap" id="btnBrowserFs" data-tip="Helskärm i webbläsaren" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
-                <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="exitFullscreen()">✕ Stäng</button>
+                <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="closeFocusMode()">✕ Stäng</button>
             </div>
         </div>
         <div class="fs-editor-wrap" id="fsEditorWrap">
@@ -2183,14 +2183,14 @@
             // Fullscreen toggle
             if (isCmd && e.key === 'Enter') {
                 e.preventDefault();
-                if (isFullscreen) exitFullscreen();
+                if (isFullscreen) closeFocusMode();
                 else enterFullscreen();
             }
 
             // Close settings/confirm/fullscreen on Escape
             if (e.key === 'Escape') {
                 if (isFullscreen) {
-                    exitFullscreen();
+                    closeFocusMode();
                 } else if (document.getElementById('settingsOverlay').classList.contains('visible')) {
                     closeSettings();
                 } else if (document.getElementById('confirmOverlay').classList.contains('visible')) {
@@ -2269,7 +2269,7 @@
             }, 50);
         }
 
-        function exitFullscreen() {
+        function closeFocusMode() {
             isFullscreen = false;
             const overlay = document.getElementById('fullscreenOverlay');
             const fsTa = document.getElementById('fsTextarea');
@@ -2332,10 +2332,23 @@
             }
         });
 
-        // On manual scroll, re-center in typewriter mode
+        // Suppress scroll re-centering while interacting with header buttons
+        let _headerInteracting = false;
+        const fsHeader = document.querySelector('.fs-header');
+        fsHeader.addEventListener('mousedown', () => { _headerInteracting = true; });
+        document.addEventListener('mouseup', () => { _headerInteracting = false; });
+
+        // On manual scroll, re-center in typewriter mode (guarded)
+        let _scrollDebounce = null;
         document.getElementById('fsTextarea').addEventListener('scroll', () => {
-            if (_suppressScroll) return;
-            updateLineHighlight(typewriterEnabled);
+            if (_suppressScroll || _headerInteracting) return;
+            const ta = document.getElementById('fsTextarea');
+            if (typewriterEnabled && document.activeElement === ta) {
+                clearTimeout(_scrollDebounce);
+                _scrollDebounce = setTimeout(() => updateLineHighlight(true), 50);
+            } else {
+                updateLineHighlight(false);
+            }
         });
 
         // Tab in fullscreen
