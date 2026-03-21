@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkrivBord — Markdown Editor</title>
+    <title>Skrivr — Markdown Editor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
@@ -1436,7 +1436,7 @@
 
     <!-- TOOLBAR -->
     <div class="toolbar">
-        <div class="toolbar-brand">✏️ SkrivBord</div>
+        <div class="toolbar-brand">✏️ Skrivr</div>
         <div class="toolbar-sep"></div>
 
         <div class="view-toggle">
@@ -1672,7 +1672,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
     <script>
         // ═══════════════════════════════════════════════
-        //  SkrivBord — State & Storage
+        //  Skrivr — State & Storage
         // ═══════════════════════════════════════════════
 
         const STORAGE_KEY = 'skrivbord-docs';
@@ -1805,7 +1805,7 @@
                 editorArea.style.display = 'none';
                 emptyState.style.display = 'flex';
                 statusBar.style.display = 'none';
-                document.title = 'SkrivBord';
+                document.title = 'Skrivr';
                 return;
             }
 
@@ -1814,7 +1814,7 @@
             statusBar.style.display = 'flex';
 
             textarea.value = doc.content;
-            document.title = `${doc.title} — SkrivBord`;
+            document.title = `${doc.title} — Skrivr`;
 
             renderPreview(doc.content);
             updateStats(doc.content);
@@ -1883,7 +1883,7 @@
                 saveDocs();
                 renderTabs();
                 if (doc.id === activeDocId) {
-                    document.title = `${doc.title} — SkrivBord`;
+                    document.title = `${doc.title} — Skrivr`;
                 }
             };
 
@@ -2265,7 +2265,7 @@
 
             setTimeout(() => {
                 fsTa.focus();
-                updateLineHighlight();
+                updateLineHighlight(true);
             }, 50);
         }
 
@@ -2332,10 +2332,10 @@
             }
         });
 
-        // On manual scroll, just reposition the highlight without forcing center
+        // On manual scroll, re-center in typewriter mode
         document.getElementById('fsTextarea').addEventListener('scroll', () => {
             if (_suppressScroll) return;
-            updateLineHighlight(false);
+            updateLineHighlight(typewriterEnabled);
         });
 
         // Tab in fullscreen
