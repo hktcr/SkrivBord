@@ -1343,6 +1343,128 @@
             box-shadow: 0 0 8px rgba(255,255,255,0.2);
         }
 
+        /* ── FOCUS DIMMING ── */
+        .fs-dim-top, .fs-dim-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+            z-index: 3;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .focus-dimming .fs-dim-top,
+        .focus-dimming .fs-dim-bottom {
+            opacity: 1;
+        }
+
+        .fs-dim-top {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(26,27,30,0.92) 0%, rgba(26,27,30,0.7) 60%, transparent 100%);
+        }
+
+        .fs-dim-bottom {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(26,27,30,0.92) 0%, rgba(26,27,30,0.7) 60%, transparent 100%);
+        }
+
+        /* ── TOTAL ZEN MODE ── */
+        .zen-mode .fs-header,
+        .zen-mode .fs-word-count,
+        .zen-mode .fs-goal-line {
+            opacity: 0 !important;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+        }
+
+        .zen-mode .fs-outline {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+        }
+
+        /* ── HEADING OUTLINE ── */
+        .fs-outline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 240px;
+            background: rgba(30, 31, 35, 0.95);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border);
+            z-index: 1020;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease, opacity 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .fs-outline.open {
+            transform: translateX(0);
+        }
+
+        .fs-outline-header {
+            padding: 14px 16px 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-light);
+            flex-shrink: 0;
+        }
+
+        .fs-outline-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+            scrollbar-width: thin;
+        }
+
+        .fs-outline-item {
+            display: block;
+            width: 100%;
+            padding: 6px 16px;
+            border: none;
+            background: none;
+            color: var(--text);
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 2px solid transparent;
+        }
+
+        .fs-outline-item:hover {
+            background: var(--surface-hover);
+            color: var(--text-bright);
+        }
+
+        .fs-outline-item.active {
+            color: var(--accent-light);
+            border-left-color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .fs-outline-item.h1 { padding-left: 16px; font-weight: 600; }
+        .fs-outline-item.h2 { padding-left: 28px; font-weight: 500; }
+        .fs-outline-item.h3 { padding-left: 40px; font-weight: 400; font-size: 0.73rem; }
+        .fs-outline-item.h4 { padding-left: 52px; font-weight: 400; font-size: 0.7rem; color: var(--text-muted); }
+
+        .fs-outline-empty {
+            padding: 16px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 700px) {
             .toolbar {
@@ -1648,6 +1770,8 @@
                     <input type="range" class="fs-width-slider" id="fsWidthSlider" min="40" max="130" value="72" oninput="setFsWidth(this.value)">
                     <span class="fs-width-value" id="fsWidthValue">72ch</span>
                 </div>
+                <button class="fs-btn tooltip-wrap" id="btnFocusDim" data-tip="Dimma omgivande text" onclick="toggleFocusDimming()">👁 Dimma</button>
+                <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()">☰ Outline</button>
                 <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
                 <button class="fs-btn tooltip-wrap" id="btnBrowserFs" data-tip="Helskärm i webbläsaren" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
                 <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
@@ -1655,7 +1779,13 @@
             </div>
         </div>
         <div class="fs-editor-wrap" id="fsEditorWrap">
+            <div class="fs-outline" id="fsOutline">
+                <div class="fs-outline-header">📑 Rubriker</div>
+                <div class="fs-outline-list" id="fsOutlineList"></div>
+            </div>
             <div class="fs-editor-container" id="fsEditorContainer">
+                <div class="fs-dim-top" id="fsDimTop"></div>
+                <div class="fs-dim-bottom" id="fsDimBottom"></div>
                 <div class="fs-line-highlight" id="fsLineHighlight"></div>
                 <textarea
                     id="fsTextarea"
@@ -1689,6 +1819,8 @@
         let isFullscreen = false;
         let typewriterEnabled = false;
         let highlightColor = 'rgba(124,92,191,0.12)';
+        let focusDimmingEnabled = false;
+        let zenTimer = null;
 
         const DEFAULT_SETTINGS = {
             previewBg: '#1a1b1e',
@@ -1698,7 +1830,8 @@
             editorBg: '#1a1b1e',
             editorColor: '#e9ecef',
             typewriter: false,
-            highlightColor: 'rgba(124,92,191,0.12)'
+            highlightColor: 'rgba(124,92,191,0.12)',
+            focusDimming: false
         };
 
         function loadDocs() {
@@ -2249,6 +2382,18 @@
             }
             document.getElementById('fsLineHighlight').style.background = highlightColor;
 
+            // Focus dimming state
+            focusDimmingEnabled = settings.focusDimming || false;
+            if (focusDimmingEnabled) {
+                container.classList.add('focus-dimming');
+                const btnDim = document.getElementById('btnFocusDim');
+                if (btnDim) btnDim.textContent = '👁 Dimma ✓';
+            } else {
+                container.classList.remove('focus-dimming');
+                const btnDim = document.getElementById('btnFocusDim');
+                if (btnDim) btnDim.textContent = '👁 Dimma';
+            }
+
             // Column width
             const savedWidth = settings.fsColumnWidth || 72;
             const container2 = document.getElementById('fsEditorContainer');
@@ -2262,6 +2407,8 @@
 
             overlay.classList.add('visible');
             updateFsWordCount(doc.content);
+            buildOutline();
+            startZenTimer();
 
             setTimeout(() => {
                 fsTa.focus();
@@ -2449,7 +2596,135 @@
             highlight.style.left = '16px';
             highlight.style.right = '16px';
             highlight.style.background = highlightColor;
+
+            // Update focus dimming overlays
+            if (focusDimmingEnabled) {
+                const dimTop = document.getElementById('fsDimTop');
+                const dimBottom = document.getElementById('fsDimBottom');
+                if (dimTop && dimBottom) {
+                    const fadeZone = lineHeight * 4;
+                    const dimTopHeight = Math.max(0, visibleTop - fadeZone);
+                    const dimBottomTop = visibleTop + lineHeight + fadeZone;
+                    const containerHeight = ta.clientHeight;
+                    dimTop.style.height = (dimTopHeight + fadeZone) + 'px';
+                    dimBottom.style.top = dimBottomTop + 'px';
+                    dimBottom.style.height = Math.max(0, containerHeight - dimBottomTop + fadeZone) + 'px';
+                }
+            }
         }
+
+        // ═══════════════════════════════════════════════
+        //  Focus Dimming, Zen Mode & Outline
+        // ═══════════════════════════════════════════════
+
+        function toggleFocusDimming() {
+            focusDimmingEnabled = !focusDimmingEnabled;
+            const container = document.getElementById('fsEditorContainer');
+            const btn = document.getElementById('btnFocusDim');
+            if (focusDimmingEnabled) {
+                container.classList.add('focus-dimming');
+                if (btn) btn.textContent = '👁 Dimma ✓';
+            } else {
+                container.classList.remove('focus-dimming');
+                if (btn) btn.textContent = '👁 Dimma';
+            }
+            const settings = loadSettings();
+            settings.focusDimming = focusDimmingEnabled;
+            saveSettings(settings);
+            updateLineHighlight(false);
+        }
+
+        // ── Total Zen ──
+        function startZenTimer() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            clearTimeout(zenTimer);
+            overlay.classList.remove('zen-mode');
+            zenTimer = setTimeout(() => {
+                if (isFullscreen) overlay.classList.add('zen-mode');
+            }, 3000);
+        }
+
+        function resetZen() {
+            if (!isFullscreen) return;
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.remove('zen-mode');
+            clearTimeout(zenTimer);
+            zenTimer = setTimeout(() => {
+                if (isFullscreen) overlay.classList.add('zen-mode');
+            }, 3000);
+        }
+
+        // Zen triggers: mouse, keyboard, touch
+        document.getElementById('fullscreenOverlay').addEventListener('mousemove', resetZen);
+        document.getElementById('fullscreenOverlay').addEventListener('touchstart', resetZen);
+        document.getElementById('fsTextarea').addEventListener('keydown', resetZen);
+
+        // ── Heading Outline ──
+        let outlineDebounce = null;
+
+        function toggleOutline() {
+            const panel = document.getElementById('fsOutline');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) buildOutline();
+        }
+
+        function buildOutline() {
+            const ta = document.getElementById('fsTextarea');
+            const list = document.getElementById('fsOutlineList');
+            if (!ta || !list) return;
+
+            const text = ta.value;
+            const regex = /^(#{1,4})\s+(.+)$/gm;
+            let match;
+            const items = [];
+            while ((match = regex.exec(text)) !== null) {
+                items.push({
+                    level: match[1].length,
+                    title: match[2].trim(),
+                    index: match.index
+                });
+            }
+
+            list.innerHTML = '';
+
+            if (items.length === 0) {
+                list.innerHTML = '<div class="fs-outline-empty">Inga rubriker hittades. Använd # för att skapa rubriker.</div>';
+                return;
+            }
+
+            const cursorPos = ta.selectionStart;
+            items.forEach((item, i) => {
+                const btn = document.createElement('button');
+                btn.className = `fs-outline-item h${item.level}`;
+                btn.textContent = item.title;
+                btn.dataset.charIndex = item.index;
+
+                // Highlight active heading (closest before cursor)
+                const nextIndex = (i + 1 < items.length) ? items[i + 1].index : text.length;
+                if (cursorPos >= item.index && cursorPos < nextIndex) {
+                    btn.classList.add('active');
+                }
+
+                btn.addEventListener('click', () => {
+                    outlineNavigateTo(item.index);
+                });
+                list.appendChild(btn);
+            });
+        }
+
+        function outlineNavigateTo(charIndex) {
+            const ta = document.getElementById('fsTextarea');
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = charIndex;
+            updateLineHighlight(true);
+            buildOutline(); // refresh active state
+        }
+
+        // Rebuild outline on text input (debounced)
+        document.getElementById('fsTextarea').addEventListener('input', () => {
+            clearTimeout(outlineDebounce);
+            outlineDebounce = setTimeout(buildOutline, 500);
+        });
 
         // ═══════════════════════════════════════════════
         //  Typewriter Settings Helpers
