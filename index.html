@@ -1111,6 +1111,31 @@
             font-size: 0.75rem;
             color: var(--text-muted);
             font-weight: 400;
+            cursor: pointer;
+            padding: 2px 6px;
+            margin-left: -6px;
+            border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .fs-title:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-bright);
+        }
+
+        .fs-title-input {
+            font-size: 0.75rem;
+            color: var(--text-bright);
+            font-weight: 500;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 2px 6px;
+            margin-left: -6px;
+            outline: none;
+            width: 180px;
+            font-family: inherit;
+            box-shadow: 0 0 0 2px rgba(124, 92, 191, 0.2);
         }
 
         .fs-actions {
@@ -1741,7 +1766,7 @@
     <!-- FULLSCREEN OVERLAY -->
     <div class="fullscreen-overlay" id="fullscreenOverlay">
         <div class="fs-header">
-            <span class="fs-title" id="fsTitle">Dokument</span>
+            <span class="fs-title tooltip-wrap" id="fsTitle" data-tip="Byt namn" onclick="renameFullscreenTitle()">Dokument</span>
             <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
                 <div class="fs-width-control tooltip-wrap" data-tip="Kolumnbredd">
@@ -1997,6 +2022,48 @@
                 }
             };
 
+            input.addEventListener('blur', finishRename);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { input.blur(); }
+                if (e.key === 'Escape') {
+                    input.value = doc.title;
+                    input.blur();
+                }
+            });
+        }
+
+        function renameFullscreenTitle() {
+            const doc = getActiveDoc();
+            if (!doc) return;
+            const titleEl = document.getElementById('fsTitle');
+            if (!titleEl) return;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'fs-title-input';
+            input.value = doc.title;
+            
+            titleEl.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            const finishRename = () => {
+                const newTitle = input.value.trim() || doc.title;
+                doc.title = newTitle;
+                doc.modified = new Date().toISOString();
+                saveDocs();
+                renderTabs(); // Updates background tabs
+                document.title = `${doc.title} — Skrivr`;
+                
+                const span = document.createElement('span');
+                span.className = 'fs-title tooltip-wrap';
+                span.id = 'fsTitle';
+                span.dataset.tip = 'Byt namn';
+                span.textContent = newTitle;
+                span.onclick = renameFullscreenTitle;
+                input.replaceWith(span);
+            };
+            
             input.addEventListener('blur', finishRename);
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { input.blur(); }
@@ -2470,9 +2537,15 @@
         document.addEventListener('mouseup', () => { _headerInteracting = false; });
 
         // On manual scroll, update highlight position but do NOT force re-center
+        // Also temporarily clear focus dimming if active so user can read everything
         document.getElementById('fsTextarea').addEventListener('scroll', () => {
             if (_suppressScroll || _headerInteracting) return;
             updateLineHighlight(false);
+            if (focusDimmingEnabled) {
+                const ta = document.getElementById('fsTextarea');
+                ta.style.webkitMaskImage = '';
+                ta.style.maskImage = '';
+            }
         });
 
         // Tab in fullscreen
