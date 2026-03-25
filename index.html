@@ -1344,29 +1344,8 @@
         }
 
         /* ── FOCUS DIMMING ── */
-        .fs-dim-top, .fs-dim-bottom {
-            position: absolute;
-            left: 0;
-            right: 0;
-            pointer-events: none;
-            z-index: 3;
-            transition: opacity 0.3s ease;
-            opacity: 0;
-        }
-
-        .focus-dimming .fs-dim-top,
-        .focus-dimming .fs-dim-bottom {
-            opacity: 1;
-        }
-
-        .fs-dim-top {
-            top: 0;
-            background: linear-gradient(to bottom, rgba(26,27,30,0.92) 0%, rgba(26,27,30,0.7) 60%, transparent 100%);
-        }
-
-        .fs-dim-bottom {
-            bottom: 0;
-            background: linear-gradient(to top, rgba(26,27,30,0.92) 0%, rgba(26,27,30,0.7) 60%, transparent 100%);
+        .fs-textarea {
+            transition: -webkit-mask-image 0.15s ease, mask-image 0.15s ease;
         }
 
         /* ── TOTAL ZEN MODE ── */
@@ -1784,8 +1763,6 @@
                 <div class="fs-outline-list" id="fsOutlineList"></div>
             </div>
             <div class="fs-editor-container" id="fsEditorContainer">
-                <div class="fs-dim-top" id="fsDimTop"></div>
-                <div class="fs-dim-bottom" id="fsDimBottom"></div>
                 <div class="fs-line-highlight" id="fsLineHighlight"></div>
                 <textarea
                     id="fsTextarea"
@@ -2597,19 +2574,25 @@
             highlight.style.right = '16px';
             highlight.style.background = highlightColor;
 
-            // Update focus dimming overlays
+            // Update focus dimming via CSS Mask
             if (focusDimmingEnabled) {
-                const dimTop = document.getElementById('fsDimTop');
-                const dimBottom = document.getElementById('fsDimBottom');
-                if (dimTop && dimBottom) {
-                    const fadeZone = lineHeight * 4;
-                    const dimTopHeight = Math.max(0, visibleTop - fadeZone);
-                    const dimBottomTop = visibleTop + lineHeight + fadeZone;
-                    const containerHeight = ta.clientHeight;
-                    dimTop.style.height = (dimTopHeight + fadeZone) + 'px';
-                    dimBottom.style.top = dimBottomTop + 'px';
-                    dimBottom.style.height = Math.max(0, containerHeight - dimBottomTop + fadeZone) + 'px';
-                }
+                const fadeZone = lineHeight * 3;
+                const dimTopEnd = Math.max(0, visibleTop - fadeZone);
+                const dimBottomStart = visibleTop + lineHeight + fadeZone;
+                
+                const maskCSS = `linear-gradient(to bottom, 
+                    transparent 0px, 
+                    transparent ${Math.max(0, dimTopEnd - fadeZone)}px, 
+                    black ${dimTopEnd}px, 
+                    black ${dimBottomStart}px, 
+                    transparent ${dimBottomStart + fadeZone}px, 
+                    transparent 100%)`;
+                
+                ta.style.webkitMaskImage = maskCSS;
+                ta.style.maskImage = maskCSS;
+            } else {
+                ta.style.webkitMaskImage = '';
+                ta.style.maskImage = '';
             }
         }
 
@@ -2621,12 +2604,17 @@
             focusDimmingEnabled = !focusDimmingEnabled;
             const container = document.getElementById('fsEditorContainer');
             const btn = document.getElementById('btnFocusDim');
+            const ta = document.getElementById('fsTextarea');
             if (focusDimmingEnabled) {
                 container.classList.add('focus-dimming');
                 if (btn) btn.textContent = '👁 Dimma ✓';
             } else {
                 container.classList.remove('focus-dimming');
                 if (btn) btn.textContent = '👁 Dimma';
+                if (ta) {
+                    ta.style.webkitMaskImage = '';
+                    ta.style.maskImage = '';
+                }
             }
             const settings = loadSettings();
             settings.focusDimming = focusDimmingEnabled;
