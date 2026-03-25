@@ -2345,17 +2345,10 @@
         fsHeader.addEventListener('mousedown', () => { _headerInteracting = true; });
         document.addEventListener('mouseup', () => { _headerInteracting = false; });
 
-        // On manual scroll, re-center in typewriter mode (guarded)
-        let _scrollDebounce = null;
+        // On manual scroll, update highlight position but do NOT force re-center
         document.getElementById('fsTextarea').addEventListener('scroll', () => {
             if (_suppressScroll || _headerInteracting) return;
-            const ta = document.getElementById('fsTextarea');
-            if (typewriterEnabled && document.activeElement === ta) {
-                clearTimeout(_scrollDebounce);
-                _scrollDebounce = setTimeout(() => updateLineHighlight(true), 50);
-            } else {
-                updateLineHighlight(false);
-            }
+            updateLineHighlight(false);
         });
 
         // Tab in fullscreen
