@@ -2325,12 +2325,19 @@
             updateLineHighlight(true);
         });
 
-        document.getElementById('fsTextarea').addEventListener('click', () => updateLineHighlight(true));
-        document.getElementById('fsTextarea').addEventListener('keyup', (e) => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', 'Backspace', 'Delete'].includes(e.key)) {
+        let _lastCursorPos = -1;
+        function checkCursorMove() {
+            if (!isFullscreen || !typewriterEnabled) return;
+            const ta = document.getElementById('fsTextarea');
+            if (ta && ta.selectionStart !== _lastCursorPos) {
+                _lastCursorPos = ta.selectionStart;
                 updateLineHighlight(true);
             }
-        });
+        }
+        document.getElementById('fsTextarea').addEventListener('click', () => setTimeout(checkCursorMove, 0));
+        document.getElementById('fsTextarea').addEventListener('keyup', checkCursorMove);
+        document.getElementById('fsTextarea').addEventListener('keydown', () => setTimeout(checkCursorMove, 0));
+        document.getElementById('fsTextarea').addEventListener('focus', checkCursorMove);
 
         // Suppress scroll re-centering while interacting with header buttons
         let _headerInteracting = false;
@@ -2382,23 +2389,50 @@
             const highlight = document.getElementById('fsLineHighlight');
             if (!ta || !highlight) return;
 
-            // Compute which line the cursor is on
-            const text = ta.value;
-            const cursorPos = ta.selectionStart;
-            const linesBefore = text.substring(0, cursorPos).split('\n').length - 1;
-
-            // Get line height from computed style (handle unitless + px)
+            // Get line height from computed style (handle unitless + px) for highlight sizing
             const style = window.getComputedStyle(ta);
             let lineHeight = parseFloat(style.lineHeight);
             if (style.lineHeight.indexOf('px') === -1 || isNaN(lineHeight) || lineHeight < 5) {
-                // lineHeight is unitless (e.g. 1.85) — multiply by font size
                 const fontSize = parseFloat(style.fontSize) || 16;
                 lineHeight = (parseFloat(style.lineHeight) || 1.85) * fontSize;
             }
-            const paddingTop = parseFloat(style.paddingTop) || 80;
 
-            // Absolute position of the cursor line within the full document
-            const absoluteLineTop = paddingTop + (linesBefore * lineHeight);
+            // Sync visual typography to a mirror div to compute exact word-wrapped caret position
+            let mirror = document.getElementById('fsMirror');
+            if (!mirror) {
+                mirror = document.createElement('div');
+                mirror.id = 'fsMirror';
+                document.body.appendChild(mirror);
+            }
+
+            const props = ['direction','paddingTop','paddingRight','paddingBottom','paddingLeft',
+                'fontStyle','fontVariant','fontWeight','fontStretch','fontSize','fontSizeAdjust',
+                'lineHeight','fontFamily','textAlign','textTransform','textIndent',
+                'textDecoration','letterSpacing','wordSpacing','tabSize','MozTabSize'];
+            props.forEach(p => mirror.style[p] = style[p]);
+            
+            mirror.style.position = 'absolute';
+            mirror.style.visibility = 'hidden';
+            mirror.style.whiteSpace = 'pre-wrap';
+            mirror.style.wordWrap = 'break-word';
+            mirror.style.top = '0';
+            mirror.style.left = '-9999px';
+            mirror.style.height = 'auto';
+            mirror.style.boxSizing = 'border-box';
+            mirror.style.border = '0';
+            // Align exact padding box so scrollbars don't skew word-wrapping
+            mirror.style.width = ta.clientWidth + 'px';
+
+            const text = ta.value;
+            const cursorPos = ta.selectionStart;
+            mirror.textContent = text.substring(0, cursorPos);
+            
+            const span = document.createElement('span');
+            span.textContent = text.substring(cursorPos, cursorPos + 1) || '\u200B';
+            mirror.appendChild(span);
+
+            // Fetch exact Y coordinate factoring in word-wraps natively
+            const absoluteLineTop = span.offsetTop;
 
             // Auto-scroll: center the cursor line in the viewport
             if (autoScroll) {
