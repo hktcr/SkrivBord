@@ -1867,7 +1867,7 @@
                             <button class="fs-btn-full" id="btnCenterScroll" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera aktiv rad</button>
                         </div>
                         <div class="fs-dropdown-item">
-                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
+                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()">⛶ Helskärm (F11)</button>
                         </div>
                         <div class="fs-dropdown-item">
                             <button class="fs-btn-full" onclick="copyMarkdown()">📋 Kopiera markdown</button>
@@ -2452,11 +2452,17 @@
                 }
             }
 
-            // Fullscreen toggle
+            // Fullscreen toggle (Focus Mode)
             if (isCmd && e.key === 'Enter') {
                 e.preventDefault();
                 if (isFullscreen) closeFocusMode();
                 else enterFullscreen();
+            }
+
+            // Browser Fullscreen toggle
+            if (e.key === 'F11' || (isCmd && e.shiftKey && (e.key === 'f' || e.key === 'F'))) {
+                e.preventDefault();
+                toggleBrowserFullscreen();
             }
 
             // Close settings/confirm/fullscreen on Escape
@@ -2836,19 +2842,29 @@
         }
 
         // ── Total Zen ──
+        let lastZenReset = 0;
+
         function startZenTimer() {
             const overlay = document.getElementById('fullscreenOverlay');
             clearTimeout(zenTimer);
             overlay.classList.remove('zen-mode');
-            zenTimer = setTimeout(() => {
-                if (isFullscreen) overlay.classList.add('zen-mode');
-            }, 3000);
+            if (isFullscreen) {
+                zenTimer = setTimeout(() => {
+                    overlay.classList.add('zen-mode');
+                }, 3000);
+            }
         }
 
         function resetZen() {
             if (!isFullscreen) return;
+            const now = Date.now();
+            if (now - lastZenReset < 200) return; // VEP Opt: Throttle events to prevent GC thrashing
+            lastZenReset = now;
+            
             const overlay = document.getElementById('fullscreenOverlay');
-            overlay.classList.remove('zen-mode');
+            if (overlay.classList.contains('zen-mode')) {
+                overlay.classList.remove('zen-mode');
+            }
             clearTimeout(zenTimer);
             zenTimer = setTimeout(() => {
                 if (isFullscreen) overlay.classList.add('zen-mode');
