@@ -1162,19 +1162,96 @@
             color: var(--text-bright);
         }
 
-        .fs-width-control {
+        .fs-dropdown {
+            position: relative;
+        }
+
+        .fs-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: rgba(30, 31, 35, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 0;
+            min-width: 220px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-8px);
+            transition: all 0.2s ease;
+            z-index: 1050;
+        }
+
+        .fs-dropdown.open .fs-dropdown-menu {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .fs-dropdown-item {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .fs-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .fs-dropdown-item.focus-dim-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .fs-btn-full {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .fs-btn-full:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-bright);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .fs-btn-full.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        .fs-zone-control {
+            width: 100%;
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-right: 12px;
         }
 
-        .fs-width-control label {
+        .fs-dropdown-item label, .fs-zone-control label {
             font-size: 11px;
             color: var(--text-muted);
             white-space: nowrap;
             letter-spacing: 0.5px;
             text-transform: uppercase;
+            flex-shrink: 0;
+            width: 45px;
         }
 
         .fs-width-slider {
@@ -1769,16 +1846,34 @@
             <span class="fs-title tooltip-wrap" id="fsTitle" data-tip="Byt namn" onclick="renameFullscreenTitle()">Dokument</span>
             <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
-                <div class="fs-width-control tooltip-wrap" data-tip="Kolumnbredd">
-                    <label>Bredd</label>
-                    <input type="range" class="fs-width-slider" id="fsWidthSlider" min="40" max="130" value="72" oninput="setFsWidth(this.value)">
-                    <span class="fs-width-value" id="fsWidthValue">72ch</span>
-                </div>
-                <button class="fs-btn tooltip-wrap" id="btnFocusDim" data-tip="Dimma omgivande text" onclick="toggleFocusDimming()">👁 Dimma</button>
                 <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()">☰ Outline</button>
-                <button class="fs-btn tooltip-wrap" id="btnCenterScroll" data-tip="Centrera aktiv rad" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera</button>
-                <button class="fs-btn tooltip-wrap" id="btnBrowserFs" data-tip="Helskärm i webbläsaren" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
-                <button class="fs-btn tooltip-wrap" data-tip="Kopiera markdown" onclick="copyMarkdown()">📋 Kopiera</button>
+                <div class="fs-dropdown" id="fsSettingsDropdown">
+                    <button class="fs-btn tooltip-wrap" id="btnFsSettings" data-tip="Fokusinställningar" onclick="toggleFsSettings(event)">⚙ Meny</button>
+                    <div class="fs-dropdown-menu" id="fsSettingsMenu">
+                        <div class="fs-dropdown-item">
+                            <label>Bredd</label>
+                            <input type="range" class="fs-width-slider" id="fsWidthSlider" min="40" max="130" value="72" oninput="setFsWidth(this.value)">
+                            <span class="fs-width-value" id="fsWidthValue">72c</span>
+                        </div>
+                        <div class="fs-dropdown-item focus-dim-item">
+                            <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()">👁 Dimma: Av</button>
+                            <div class="fs-zone-control" id="fsZoneControl" style="display:none;">
+                                <label>Zon</label>
+                                <input type="range" class="fs-width-slider" id="fsZoneSlider" min="1" max="15" value="3" oninput="setFsZone(this.value)">
+                                <span class="fs-width-value" id="fsZoneValue">3 Rader</span>
+                            </div>
+                        </div>
+                        <div class="fs-dropdown-item">
+                            <button class="fs-btn-full" id="btnCenterScroll" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera aktiv rad</button>
+                        </div>
+                        <div class="fs-dropdown-item">
+                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()">⛶ Helskärm</button>
+                        </div>
+                        <div class="fs-dropdown-item">
+                            <button class="fs-btn-full" onclick="copyMarkdown()">📋 Kopiera markdown</button>
+                        </div>
+                    </div>
+                </div>
                 <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="closeFocusMode()">✕ Stäng</button>
             </div>
         </div>
@@ -2428,14 +2523,26 @@
 
             // Focus dimming state
             focusDimmingEnabled = settings.focusDimming || false;
+            const focusZoneLines = settings.focusZoneLines || 3;
+            document.getElementById('fsZoneSlider').value = focusZoneLines;
+            document.getElementById('fsZoneValue').textContent = focusZoneLines + ' Rader';
+            
+            const btnDim = document.getElementById('btnFocusDim');
+            const zoneControl = document.getElementById('fsZoneControl');
             if (focusDimmingEnabled) {
                 container.classList.add('focus-dimming');
-                const btnDim = document.getElementById('btnFocusDim');
-                if (btnDim) btnDim.textContent = '👁 Dimma ✓';
+                if (btnDim) {
+                    btnDim.textContent = '👁 Dimma: På ✓';
+                    btnDim.classList.add('active');
+                }
+                if (zoneControl) zoneControl.style.display = 'flex';
             } else {
                 container.classList.remove('focus-dimming');
-                const btnDim = document.getElementById('btnFocusDim');
-                if (btnDim) btnDim.textContent = '👁 Dimma';
+                if (btnDim) {
+                    btnDim.textContent = '👁 Dimma: Av';
+                    btnDim.classList.remove('active');
+                }
+                if (zoneControl) zoneControl.style.display = 'none';
             }
 
             // Column width
@@ -2649,7 +2756,9 @@
 
             // Update focus dimming via CSS Mask
             if (focusDimmingEnabled) {
-                const fadeZone = lineHeight * 3;
+                const settings = loadSettings();
+                const zoneLines = settings.focusZoneLines || 3;
+                const fadeZone = lineHeight * zoneLines;
                 const dimTopEnd = Math.max(0, visibleTop - fadeZone);
                 const dimBottomStart = visibleTop + lineHeight + fadeZone;
                 
@@ -2670,20 +2779,43 @@
         }
 
         // ═══════════════════════════════════════════════
-        //  Focus Dimming, Zen Mode & Outline
+        //  Focus Dimming, Zen Mode, Menu & Outline
         // ═══════════════════════════════════════════════
+
+        function toggleFsSettings(e) {
+            e.stopPropagation();
+            document.getElementById('fsSettingsDropdown').classList.toggle('open');
+            document.getElementById('btnFsSettings').classList.toggle('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('fsSettingsDropdown');
+            if (dropdown && dropdown.classList.contains('open') && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+                document.getElementById('btnFsSettings').classList.remove('active');
+            }
+        });
 
         function toggleFocusDimming() {
             focusDimmingEnabled = !focusDimmingEnabled;
             const container = document.getElementById('fsEditorContainer');
             const btn = document.getElementById('btnFocusDim');
             const ta = document.getElementById('fsTextarea');
+            const zoneControl = document.getElementById('fsZoneControl');
             if (focusDimmingEnabled) {
                 container.classList.add('focus-dimming');
-                if (btn) btn.textContent = '👁 Dimma ✓';
+                if (btn) {
+                    btn.textContent = '👁 Dimma: På ✓';
+                    btn.classList.add('active');
+                }
+                if (zoneControl) zoneControl.style.display = 'flex';
             } else {
                 container.classList.remove('focus-dimming');
-                if (btn) btn.textContent = '👁 Dimma';
+                if (btn) {
+                    btn.textContent = '👁 Dimma: Av';
+                    btn.classList.remove('active');
+                }
+                if (zoneControl) zoneControl.style.display = 'none';
                 if (ta) {
                     ta.style.webkitMaskImage = '';
                     ta.style.maskImage = '';
@@ -2691,6 +2823,14 @@
             }
             const settings = loadSettings();
             settings.focusDimming = focusDimmingEnabled;
+            saveSettings(settings);
+            updateLineHighlight(false);
+        }
+
+        function setFsZone(val) {
+            document.getElementById('fsZoneValue').textContent = val + ' Rader';
+            const settings = loadSettings();
+            settings.focusZoneLines = parseInt(val, 10);
             saveSettings(settings);
             updateLineHighlight(false);
         }
