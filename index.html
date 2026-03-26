@@ -229,13 +229,14 @@
             color: var(--danger);
         }
 
-        .tab-new {
+        .tab-action {
             display: flex;
             align-items: center;
             justify-content: center;
             width: 28px;
             height: 28px;
             margin-bottom: 3px;
+            margin-right: 6px;
             border: 1px dashed var(--border);
             border-radius: 6px;
             cursor: pointer;
@@ -245,7 +246,7 @@
             flex-shrink: 0;
         }
 
-        .tab-new:hover {
+        .tab-action:hover {
             border-color: var(--accent);
             color: var(--accent-light);
             background: var(--accent-glow);
@@ -1679,7 +1680,8 @@
 
     <!-- TAB BAR -->
     <div class="tab-bar" id="tabBar">
-        <div class="tab-new tooltip-wrap" data-tip="Nytt dokument (⌘N)" onclick="createNewDoc()">+</div>
+        <div class="tab-action tab-import tooltip-wrap" data-tip="Importera .md / .txt" onclick="importFile()">📁</div>
+        <div class="tab-action tab-new tooltip-wrap" id="tabNewBtn" data-tip="Nytt dokument (⌘N)" onclick="createNewDoc()">+</div>
     </div>
 
     <!-- EDITOR AREA -->
@@ -1987,6 +1989,40 @@
             }, 50);
         }
 
+        function importFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.md,.txt,.markdown';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const content = ev.target.result;
+                    const newId = Date.now().toString();
+                    const title = file.name.replace(/\.[^/.]+$/, ""); // Strip extension
+                    const doc = {
+                        id: newId,
+                        title: title,
+                        content: content,
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    };
+                    docs.push(doc);
+                    saveDocs();
+                    setActiveDoc(newId);
+                    updateDocCount();
+                    
+                    setTimeout(() => {
+                        const ta = document.getElementById('editorTextarea');
+                        if(ta) ta.focus();
+                    }, 50);
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
         function deleteDoc(id) {
             const doc = docs.find(d => d.id === id);
             if (!doc) return;
@@ -2058,7 +2094,7 @@
 
         function renderTabs() {
             const bar = document.getElementById('tabBar');
-            const newBtn = bar.querySelector('.tab-new');
+            const insertBeforeNode = bar.querySelector('.tab-new'); // Insert before the "New Document" button
 
             // Remove old tabs
             bar.querySelectorAll('.tab').forEach(t => t.remove());
@@ -2068,10 +2104,10 @@
                 tab.className = 'tab' + (doc.id === activeDocId ? ' active' : '');
                 tab.dataset.id = doc.id;
 
-                const name = document.createElement('span');
-                name.className = 'tab-name';
-                name.textContent = doc.title;
-                name.addEventListener('dblclick', (e) => {
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'tab-name';
+                nameSpan.textContent = doc.title;
+                nameSpan.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
                     startRenameTab(doc.id, tab);
                 });
