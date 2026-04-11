@@ -1680,6 +1680,7 @@
 
     <!-- TAB BAR -->
     <div class="tab-bar" id="tabBar">
+        <div class="tab-action tab-import tooltip-wrap" data-tip="Importera från gAIa (kod)" onclick="importFromCode()">🤖</div>
         <div class="tab-action tab-import tooltip-wrap" data-tip="Importera .md / .txt" onclick="importFile()">📁</div>
         <div class="tab-action tab-new tooltip-wrap" id="tabNewBtn" data-tip="Nytt dokument (⌘N)" onclick="createNewDoc()">+</div>
     </div>
@@ -1987,6 +1988,15 @@
             setTimeout(() => {
                 document.getElementById('editorTextarea').focus();
             }, 50);
+        }
+
+        function importFromCode() {
+            const code = prompt('Fyll i importkoden från gAIa (t.ex. 2xu7rs2l):');
+            if (!code || !code.trim()) return;
+            
+            // Vi använder TinyURL som länkförkortare för att transportera den gigantiska
+            // lokal-hashen över HTTP. Den korta koden dirigerar tyst om oss tillbaka hit men med hashen.
+            window.location.href = 'https://tinyurl.com/' + code.trim();
         }
 
         function importFile() {
