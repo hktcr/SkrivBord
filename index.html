@@ -3330,6 +3330,34 @@
             loadDocs();
             activeDocId = localStorage.getItem(ACTIVE_KEY) || null;
 
+            // ── URL Import: ?doc=BASE64&title=NAME ──
+            const urlParams = new URLSearchParams(window.location.search);
+            const docParam = urlParams.get('doc');
+            const titleParam = urlParams.get('title');
+            if (docParam) {
+                try {
+                    const content = decodeURIComponent(atob(docParam));
+                    const title = titleParam ? decodeURIComponent(titleParam) : 'Importerat dokument';
+                    const newId = 'doc-import-' + Date.now();
+                    const doc = {
+                        id: newId,
+                        title: title,
+                        content: content,
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    };
+                    docs.push(doc);
+                    saveDocs();
+                    activeDocId = newId;
+                    localStorage.setItem(ACTIVE_KEY, newId);
+                    // Clean URL to prevent re-import on reload
+                    window.history.replaceState({}, '', window.location.pathname);
+                    setTimeout(() => showToast(`📄 "${title}" importerat från gAIa`), 300);
+                } catch (e) {
+                    console.warn('Skrivr: URL import failed', e);
+                }
+            }
+
             // Validate active doc exists
             if (activeDocId && !docs.find(d => d.id === activeDocId)) {
                 activeDocId = docs.length > 0 ? docs[0].id : null;
