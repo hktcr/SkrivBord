@@ -3330,8 +3330,8 @@
             loadDocs();
             activeDocId = localStorage.getItem(ACTIVE_KEY) || null;
 
-            // ── URL Import: ?doc=BASE64&title=NAME ──
-            const urlParams = new URLSearchParams(window.location.search);
+            // ── URL Import: ?doc=BASE64&title=NAME or #doc=BASE64&title=NAME ──
+            const urlParams = new URLSearchParams(window.location.search || window.location.hash.substring(1));
             const docParam = urlParams.get('doc');
             const titleParam = urlParams.get('title');
             if (docParam) {
