@@ -1673,6 +1673,10 @@
 
         <div class="toolbar-spacer"></div>
 
+        <button class="tb-btn tooltip-wrap" data-tip="Visa kortkommandon" style="color:var(--text-dim);" onclick="openShortcuts()">
+            <span class="icon">⌨️</span>
+        </button>
+
         <button class="tb-btn accent tooltip-wrap" data-tip="Anpassa färger, storlek och typsnitt" onclick="openSettings()">
             <span class="icon">⚙</span> Utseende
         </button>
@@ -1764,6 +1768,25 @@
         <div class="status-item" id="statusDocs">0 dokument</div>
     </div>
 
+    <!-- SHORTCUTS OVERLAY -->
+    <div class="settings-overlay" id="shortcutsOverlay">
+        <div class="settings-panel">
+            <h3>⌨️ Kortkommandon</h3>
+            <table class="shortcuts-table" style="width:100%; text-align:left; border-spacing:0 12px; margin-bottom:20px; font-size:0.95rem; color:var(--text)">
+                <tr><td style="color:var(--accent); font-weight:600; padding-right:16px;">⌘/Ctrl + N</td><td>Nytt dokument</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + O</td><td>Importera fil</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + S</td><td>Tvinga Spara</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + ⇧ + C</td><td>Kopiera all text</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + P</td><td>Skriv ut / PDF</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + ↵</td><td>Fokusläge (Av/På)</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">Esc</td><td>Stäng dialoger / Fokus</td></tr>
+            </table>
+            <div class="settings-actions">
+                <button class="btn-close-settings" onclick="closeShortcuts()">Stäng</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SETTINGS OVERLAY -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
@@ -1849,6 +1872,7 @@
             <span class="fs-title tooltip-wrap" id="fsTitle" data-tip="Byt namn" onclick="renameFullscreenTitle()">Dokument</span>
             <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
+                <button class="fs-btn tooltip-wrap" style="color:var(--text-dim);" data-tip="Kortkommandon" onclick="openShortcuts()">⌨️</button>
                 <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()">☰ Outline</button>
                 <div class="fs-dropdown" id="fsSettingsDropdown">
                     <button class="fs-btn tooltip-wrap" id="btnFsSettings" data-tip="Fokusinställningar" onclick="toggleFsSettings(event)">⚙ Meny</button>
@@ -3024,6 +3048,17 @@
             settings.fsColumnWidth = val;
             saveSettings(settings);
         }
+
+        // ── SHORTCUTS OVERLAY ──
+        function openShortcuts() {
+            document.getElementById('shortcutsOverlay').classList.add('visible');
+        }
+        function closeShortcuts() {
+            document.getElementById('shortcutsOverlay').classList.remove('visible');
+        }
+        document.getElementById('shortcutsOverlay').addEventListener('mousedown', (e) => {
+            if (e.target.id === 'shortcutsOverlay') closeShortcuts();
+        });
 
         // ═══════════════════════════════════════════════
         //  Timer & Writing Goals
