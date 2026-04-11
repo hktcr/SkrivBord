@@ -2569,6 +2569,11 @@
             const doc = getActiveDoc();
             if (!doc) return;
 
+            // Trigger browser native fullscreen automatically
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+
             isFullscreen = true;
             const overlay = document.getElementById('fullscreenOverlay');
             const fsTa = document.getElementById('fsTextarea');
