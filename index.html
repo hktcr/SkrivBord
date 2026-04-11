@@ -1827,6 +1827,12 @@
                 <input type="color" id="settEditorColor" value="#e9ecef">
             </div>
 
+            <div class="setting-row">
+                <label>Editor-kolumnbredd</label>
+                <input type="range" id="settEditorWidth" min="40" max="150" value="150" oninput="updateEditorWidthLabel()">
+                <span class="range-value" id="editorWidthLabel">Max</span>
+            </div>
+
             <div class="setting-section-label">Fokusläge</div>
 
             <div class="setting-row">
@@ -1953,6 +1959,7 @@
             fontFamily: 'mono',
             editorBg: '#ffffff',
             editorColor: '#212529',
+            editorWidth: 150,
             typewriter: true,
             highlightColor: 'rgba(250,176,5,0.10)',
             focusDimming: true,
@@ -2350,11 +2357,13 @@
             document.getElementById('settFont').value = settings.fontFamily;
             document.getElementById('settEditorBg').value = settings.editorBg;
             document.getElementById('settEditorColor').value = settings.editorColor;
+            document.getElementById('settEditorWidth').value = settings.editorWidth || 150;
             updateFontSizeLabel();
+            updateEditorWidthLabel();
             document.getElementById('settingsOverlay').classList.add('visible');
 
             // Live preview
-            const inputs = ['settBg', 'settColor', 'settFontSize', 'settFont', 'settEditorBg', 'settEditorColor'];
+            const inputs = ['settBg', 'settColor', 'settFontSize', 'settFont', 'settEditorBg', 'settEditorColor', 'settEditorWidth'];
             inputs.forEach(id => {
                 document.getElementById(id).addEventListener('input', liveApplySettings);
                 document.getElementById(id).addEventListener('change', liveApplySettings);
@@ -2368,11 +2377,23 @@
                 fontSize: parseInt(document.getElementById('settFontSize').value),
                 fontFamily: document.getElementById('settFont').value,
                 editorBg: document.getElementById('settEditorBg').value,
-                editorColor: document.getElementById('settEditorColor').value
+                editorColor: document.getElementById('settEditorColor').value,
+                editorWidth: parseInt(document.getElementById('settEditorWidth').value)
             };
-            saveSettings(settings);
+            // Bevara existerande inställningar (fokusläge)
+            const old = loadSettings();
+            old.previewBg = settings.previewBg;
+            old.previewColor = settings.previewColor;
+            old.fontSize = settings.fontSize;
+            old.fontFamily = settings.fontFamily;
+            old.editorBg = settings.editorBg;
+            old.editorColor = settings.editorColor;
+            old.editorWidth = settings.editorWidth;
+            
+            saveSettings(old);
             applySettings();
             updateFontSizeLabel();
+            updateEditorWidthLabel();
         }
 
         function closeSettings() {
@@ -2387,13 +2408,20 @@
             document.getElementById('settFont').value = DEFAULT_SETTINGS.fontFamily;
             document.getElementById('settEditorBg').value = DEFAULT_SETTINGS.editorBg;
             document.getElementById('settEditorColor').value = DEFAULT_SETTINGS.editorColor;
+            document.getElementById('settEditorWidth').value = DEFAULT_SETTINGS.editorWidth;
             updateFontSizeLabel();
+            updateEditorWidthLabel();
             applySettings();
         }
 
         function updateFontSizeLabel() {
             document.getElementById('fontSizeLabel').textContent =
                 document.getElementById('settFontSize').value + 'px';
+        }
+
+        function updateEditorWidthLabel() {
+            const val = document.getElementById('settEditorWidth').value;
+            document.getElementById('editorWidthLabel').textContent = val >= 150 ? 'Max' : val + 'ch';
         }
 
         function applySettings() {
@@ -2421,6 +2449,14 @@
             // Editor styling
             textarea.style.background = settings.editorBg;
             textarea.style.color = settings.editorColor;
+
+            const eWidth = settings.editorWidth || 150;
+            if (eWidth >= 150) {
+                textarea.style.maxWidth = '100%';
+            } else {
+                textarea.style.maxWidth = eWidth + 'ch';
+            }
+            textarea.style.margin = '0 auto';
 
             // Also style the preview pane background
             document.getElementById('previewPane').querySelector('.pane-label + .preview-content') ||
