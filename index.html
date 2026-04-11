@@ -2449,6 +2449,8 @@
             // Editor styling
             textarea.style.background = settings.editorBg;
             textarea.style.color = settings.editorColor;
+            textarea.style.fontSize = settings.fontSize + 'px';
+            textarea.style.fontFamily = fontMap[settings.fontFamily] || fontMap.mono;
 
             const eWidth = settings.editorWidth || 150;
             if (eWidth >= 150) {
@@ -2625,6 +2627,8 @@
             overlay.style.background = settings.editorBg;
             fsTa.style.color = settings.editorColor;
             fsTa.style.fontSize = (settings.fontSize || 16) + 'px';
+            const fontMap = { serif: 'var(--font-serif)', sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
+            fsTa.style.fontFamily = fontMap[settings.fontFamily] || fontMap.mono;
 
             // Typewriter state
             typewriterEnabled = settings.typewriter || false;
