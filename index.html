@@ -2026,15 +2026,15 @@
                     <input type="range" id="settValsangDepth" min="0" max="2" step="0.1" value="1.0" oninput="updateValsangSettings()">
                 </div>
                 <div class="setting-row" style="margin-bottom:8px;">
-                    <label>Djupvatten-bakgrund</label>
+                    <label>Djupvatten-bakgrund (Fokusläge)</label>
                     <div class="setting-toggle"><div class="toggle-track" id="settDjupvatten" onclick="toggleDjupvatten()"></div></div>
                 </div>
                 <div class="setting-row" style="margin-bottom:8px;">
-                    <label>Sonogram i fokusläge</label>
+                    <label>Sonogram (Fokusläge)</label>
                     <div class="setting-toggle"><div class="toggle-track" id="settSonogram" onclick="toggleSonogram()"></div></div>
                 </div>
                 <div class="setting-row" style="margin-bottom:0;">
-                    <label>Mareld (Målanimation)</label>
+                    <label>Mareld/Målanimation (Fokusläge)</label>
                     <div class="setting-toggle"><div class="toggle-track" id="settMareld" onclick="toggleMareld()"></div></div>
                 </div>
             </div>
@@ -3138,7 +3138,7 @@
 
             // Initiera Valsång om det är valt
             if (typewriterSoundProfile === 'valsang' && typewriterSoundEnabled) {
-                if (!audioCtx) audioCtx = new AudioContext();
+                if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 if (window.ValsangEngine) {
                     window.ValsangEngine.init(audioCtx);
@@ -3254,7 +3254,7 @@
 
             // Skrivmaskinsljud om påslaget
             if (typewriterSoundEnabled) {
-                if (!audioCtx) audioCtx = new AudioContext();
+                if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
                 if (typewriterSoundProfile === 'valsang') {
