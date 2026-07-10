@@ -8,6 +8,7 @@
 export const VisualsEngine = (() => {
     let sonogramCanvas, sonoCtx;
     let mareldCanvas, mareldCtx;
+    let djupvattenContainer = null;
     let djupvattenLayers = [];
     
     // Configs
@@ -57,6 +58,7 @@ export const VisualsEngine = (() => {
             mareldCtx.scale(dpr, dpr);
         }
         
+        djupvattenContainer = domElements.djupvattenContainer;
         djupvattenLayers = domElements.djupvattenLayers || [];
         mareldVeil = domElements.mareldVeil;
         
@@ -93,8 +95,10 @@ export const VisualsEngine = (() => {
         config = { ...config, ...newConfig };
         if (!config.djupvattenEnabled) {
             djupvattenLayers.forEach(l => l.style.opacity = '0');
+            if (djupvattenContainer) djupvattenContainer.style.backgroundColor = 'transparent';
         } else {
             djupvattenLayers.forEach(l => l.style.opacity = '1');
+            if (djupvattenContainer) djupvattenContainer.style.backgroundColor = '#08101a';
             updateDjupvatten(); // Initial
         }
         

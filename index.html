@@ -3149,7 +3149,15 @@
             
             // Initiera VisualsEngine
             if (window.VisualsEngine && window.ValsangEngine) {
-                window.VisualsEngine.init(window.ValsangEngine, {
+                const domElements = {
+                    sonogramCanvas: document.getElementById('sonogramCanvas'),
+                    mareldCanvas: document.getElementById('mareldCanvas'),
+                    mareldVeil: document.getElementById('mareldVeil'),
+                    djupvattenContainer: document.getElementById('djupvattenContainer'),
+                    djupvattenLayers: Array.from(document.querySelectorAll('.dj-layer'))
+                };
+                window.VisualsEngine.init(domElements, () => window.ValsangEngine.getState());
+                window.VisualsEngine.setConfig({
                     sonogramEnabled: settings.valsangSonogram !== false,
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
