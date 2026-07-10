@@ -2012,7 +2012,31 @@
                     <option value="digital">Digital (Lätt)</option>
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
+                    <option value="valsang">Valsång (Kontinuerlig)</option>
                 </select>
+            </div>
+
+            <div id="valsangSettings" style="display: none; flex-direction: column; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
+                <div class="setting-row" style="margin-bottom:8px;">
+                    <label>Volym (Valsång)</label>
+                    <input type="range" id="settValsangVol" min="0" max="1" step="0.05" value="0.6" oninput="updateValsangSettings()">
+                </div>
+                <div class="setting-row" style="margin-bottom:8px;">
+                    <label>Eko/Djup</label>
+                    <input type="range" id="settValsangDepth" min="0" max="2" step="0.1" value="1.0" oninput="updateValsangSettings()">
+                </div>
+                <div class="setting-row" style="margin-bottom:8px;">
+                    <label>Djupvatten-bakgrund</label>
+                    <div class="setting-toggle"><div class="toggle-track" id="settDjupvatten" onclick="toggleDjupvatten()"></div></div>
+                </div>
+                <div class="setting-row" style="margin-bottom:8px;">
+                    <label>Sonogram i fokusläge</label>
+                    <div class="setting-toggle"><div class="toggle-track" id="settSonogram" onclick="toggleSonogram()"></div></div>
+                </div>
+                <div class="setting-row" style="margin-bottom:0;">
+                    <label>Mareld (Målanimation)</label>
+                    <div class="setting-toggle"><div class="toggle-track" id="settMareld" onclick="toggleMareld()"></div></div>
+                </div>
             </div>
 
             <div class="setting-row">
@@ -2055,6 +2079,15 @@
 
     <!-- FULLSCREEN OVERLAY -->
     <div class="fullscreen-overlay" id="fullscreenOverlay">
+        
+        <!-- Valsång Background Layers -->
+        <div id="djupvattenContainer" style="position:absolute; inset:0; z-index:0; pointer-events:none; background-color: transparent;">
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 50% -20%, rgba(20,50,90,0.6) 0%, transparent 60%);"></div>
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 100% 50%, rgba(10,30,60,0.4) 0%, transparent 50%);"></div>
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 0% 100%, rgba(15,40,75,0.3) 0%, transparent 40%);"></div>
+        </div>
+        <canvas id="mareldCanvas" style="position:absolute; inset:0; z-index:1; pointer-events:none;"></canvas>
+        <div id="mareldVeil" style="position:absolute; inset:0; z-index:2; pointer-events:none; background: radial-gradient(circle, transparent 20%, rgba(25,15,40,0.85) 120%); opacity:0; transition:opacity 2s;"></div>
         
         <!-- Dold sidebar för textstorlek -->
         <div class="fs-sidebar" id="fsSidebar">
@@ -2113,6 +2146,7 @@
                     placeholder="Skriv…"
                     spellcheck="true"
                 ></textarea>
+                <canvas id="sonogramCanvas" height="80" style="position:absolute; bottom:0; left:0; width:100%; pointer-events:none; z-index:5;"></canvas>
             </div>
         </div>
         <div class="fs-word-count" id="fsWordCount">0 ord</div>
@@ -2120,6 +2154,12 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
+    <script type="module">
+        import { ValsangEngine } from './valsang-engine.js';
+        import { VisualsEngine } from './visuals-engine.js';
+        window.ValsangEngine = ValsangEngine;
+        window.VisualsEngine = VisualsEngine;
+    </script>
     <script>
         // ═══════════════════════════════════════════════
         //  Skrivr — State & Storage
@@ -2162,6 +2202,11 @@
             typewriter: true,
             typewriterSound: false,
             typewriterSoundProfile: 'digital',
+            valsangVol: 0.6,
+            valsangDepth: 1.0,
+            valsangDjupvatten: true,
+            valsangSonogram: true,
+            valsangMareld: true,
             highlightColor: 'rgba(250,176,5,0.10)',
             focusDimming: true,
             focusZoneLines: 5,
@@ -3091,6 +3136,32 @@
             buildOutline();
             startZenTimer();
 
+            // Initiera Valsång om det är valt
+            if (typewriterSoundProfile === 'valsang' && typewriterSoundEnabled) {
+                if (!audioCtx) audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                if (window.ValsangEngine) {
+                    window.ValsangEngine.init(audioCtx);
+                    window.ValsangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                    window.ValsangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
+                }
+            }
+            
+            // Initiera VisualsEngine
+            if (window.VisualsEngine && window.ValsangEngine) {
+                window.VisualsEngine.init(window.ValsangEngine, {
+                    sonogramEnabled: settings.valsangSonogram !== false,
+                    djupvattenEnabled: settings.valsangDjupvatten !== false,
+                    mareldEnabled: settings.valsangMareld !== false,
+                    theme: 'dark'
+                });
+                
+                // Bara kör om Valsång är valt
+                if (typewriterSoundProfile === 'valsang' && typewriterSoundEnabled) {
+                    window.VisualsEngine.start();
+                }
+            }
+
             setTimeout(() => {
                 fsTa.focus();
                 updateLineHighlight(true);
@@ -3114,6 +3185,13 @@
             }
 
             overlay.classList.remove('visible');
+
+            if (window.ValsangEngine) {
+                window.ValsangEngine.destroy();
+            }
+            if (window.VisualsEngine) {
+                window.VisualsEngine.stop();
+            }
 
             // Exit browser fullscreen if active
             if (document.fullscreenElement) {
@@ -3170,6 +3248,13 @@
             if (typewriterSoundEnabled) {
                 if (!audioCtx) audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                if (typewriterSoundProfile === 'valsang') {
+                    if (window.ValsangEngine) {
+                        window.ValsangEngine.handleKey(e);
+                    }
+                    return; // Hoppa över vanliga ljud
+                }
                 
                 if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                     const isEnter = e.key === 'Enter';
@@ -3615,6 +3700,54 @@
             settings.typewriterSoundProfile = document.getElementById('settTypewriterSoundProfile').value;
             saveSettings(settings);
             applySettings(settings);
+            
+            document.getElementById('valsangSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'flex' : 'none';
+            if (window.ValsangEngine) {
+                if (settings.typewriterSoundProfile === 'valsang' && settings.typewriterSound && isFullscreen) {
+                    window.ValsangEngine.init(audioCtx);
+                } else {
+                    window.ValsangEngine.destroy();
+                }
+            }
+        }
+
+        function updateValsangSettings() {
+            const settings = loadSettings();
+            settings.valsangVol = parseFloat(document.getElementById('settValsangVol').value);
+            settings.valsangDepth = parseFloat(document.getElementById('settValsangDepth').value);
+            saveSettings(settings);
+            
+            if (window.ValsangEngine) {
+                window.ValsangEngine.setVolume(settings.valsangVol);
+                window.ValsangEngine.setDepth(settings.valsangDepth);
+            }
+        }
+        
+        function toggleDjupvatten() {
+            const track = document.getElementById('settDjupvatten');
+            track.classList.toggle('active');
+            const settings = loadSettings();
+            settings.valsangDjupvatten = track.classList.contains('active');
+            saveSettings(settings);
+            if (window.VisualsEngine) window.VisualsEngine.setConfig({ djupvattenEnabled: settings.valsangDjupvatten });
+        }
+        
+        function toggleSonogram() {
+            const track = document.getElementById('settSonogram');
+            track.classList.toggle('active');
+            const settings = loadSettings();
+            settings.valsangSonogram = track.classList.contains('active');
+            saveSettings(settings);
+            if (window.VisualsEngine) window.VisualsEngine.setConfig({ sonogramEnabled: settings.valsangSonogram });
+        }
+        
+        function toggleMareld() {
+            const track = document.getElementById('settMareld');
+            track.classList.toggle('active');
+            const settings = loadSettings();
+            settings.valsangMareld = track.classList.contains('active');
+            saveSettings(settings);
+            if (window.VisualsEngine) window.VisualsEngine.setConfig({ mareldEnabled: settings.valsangMareld });
         }
 
         function setHighlightColor(el) {
@@ -4046,6 +4179,15 @@
                 document.getElementById('settTypewriterSoundProfile').value = settings.typewriterSoundProfile || 'digital';
                 document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
             }
+            
+            if (settings.typewriterSoundProfile === 'valsang') {
+                document.getElementById('valsangSettings').style.display = 'flex';
+            }
+            document.getElementById('settValsangVol').value = settings.valsangVol !== undefined ? settings.valsangVol : 0.6;
+            document.getElementById('settValsangDepth').value = settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0;
+            if (settings.valsangDjupvatten !== false) document.getElementById('settDjupvatten').classList.add('active');
+            if (settings.valsangSonogram !== false) document.getElementById('settSonogram').classList.add('active');
+            if (settings.valsangMareld !== false) document.getElementById('settMareld').classList.add('active');
             if (settings.fsBgType) {
                 document.getElementById('settZenBg').value = settings.fsBgType;
             }
