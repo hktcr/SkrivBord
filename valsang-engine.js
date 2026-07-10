@@ -171,7 +171,6 @@ export const ValsangEngine = (() => {
             voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop();
             if (idleLFO) idleLFO.stop();
         } catch(e) {}
-        ctx.close();
         ctx = null;
     }
 
