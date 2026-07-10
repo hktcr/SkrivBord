@@ -2006,6 +2006,15 @@
                 </div>
             </div>
 
+            <div class="setting-row" id="soundProfileRow" style="display: none;">
+                <label>Ljudprofil</label>
+                <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: 140px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+                    <option value="digital">Digital (Lätt)</option>
+                    <option value="mechanical">Mekanisk (Klassisk)</option>
+                    <option value="vintage">Vintage (Tung)</option>
+                </select>
+            </div>
+
             <div class="setting-row">
                 <label>Radfärg</label>
                 <div class="color-swatches" id="highlightSwatches">
@@ -2131,6 +2140,7 @@
         let isFullscreen = false;
         let typewriterEnabled = false;
         let typewriterSoundEnabled = false;
+        let typewriterSoundProfile = 'digital';
         let highlightColor = 'rgba(124,92,191,0.12)';
         let focusDimmingEnabled = false;
         let zenTimer = null;
@@ -2151,6 +2161,7 @@
             editorWidth: 150,
             typewriter: true,
             typewriterSound: false,
+            typewriterSoundProfile: 'digital',
             highlightColor: 'rgba(250,176,5,0.10)',
             focusDimming: true,
             focusZoneLines: 5,
@@ -3012,6 +3023,7 @@
             // Typewriter state
             typewriterEnabled = settings.typewriter || false;
             typewriterSoundEnabled = settings.typewriterSound || false;
+            typewriterSoundProfile = settings.typewriterSoundProfile || 'digital';
             
             // Apply fsFontSize to slider and textarea
             if (settings.fsFontSize) {
@@ -3159,30 +3171,109 @@
                 if (!audioCtx) audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
-                if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+                if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                     const isEnter = e.key === 'Enter';
+                    const isSpace = e.key === ' ';
+                    const isBackspace = e.key === 'Backspace';
                     
                     const osc = audioCtx.createOscillator();
                     const oscGain = audioCtx.createGain();
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(isEnter ? 150 : 250, audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.05);
-                    
-                    const duration = isEnter ? 0.1 : 0.05;
-                    oscGain.gain.setValueAtTime(0, audioCtx.currentTime);
-                    oscGain.gain.linearRampToValueAtTime(isEnter ? 0.6 : 0.4, audioCtx.currentTime + 0.01);
-                    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-                    
                     const filter = audioCtx.createBiquadFilter();
+                    
+                    let frequency, rampToFreq, gainVol, rampToGain, duration, filterFreq, filterQ;
+                    
+                    if (typewriterSoundProfile === 'mechanical') {
+                        // Mekanisk skrivmaskin (klack, klack, ding på enter)
+                        osc.type = isEnter ? 'sine' : 'square';
+                        if (isEnter) {
+                            frequency = 1800; rampToFreq = 1800;
+                            gainVol = 0.5; rampToGain = 0.01; duration = 0.4;
+                            filterFreq = 2000; filterQ = 10.0;
+                        } else if (isBackspace) {
+                            frequency = 120; rampToFreq = 40;
+                            gainVol = 0.4; rampToGain = 0.01; duration = 0.08;
+                            filterFreq = 800; filterQ = 1.0;
+                        } else if (isSpace) {
+                            frequency = 100; rampToFreq = 50;
+                            gainVol = 0.2; rampToGain = 0.01; duration = 0.05;
+                            filterFreq = 600; filterQ = 1.0;
+                        } else {
+                            frequency = 400 + Math.random() * 100; rampToFreq = 50;
+                            gainVol = 0.6; rampToGain = 0.01; duration = 0.05;
+                            filterFreq = 1500; filterQ = 2.0;
+                        }
+                    } else if (typewriterSoundProfile === 'vintage') {
+                        // Vintage, tung skrivmaskin
+                        osc.type = isEnter ? 'triangle' : 'sawtooth';
+                        if (isEnter) {
+                            frequency = 2500; rampToFreq = 2000;
+                            gainVol = 0.6; rampToGain = 0.01; duration = 0.5;
+                            filterFreq = 3000; filterQ = 5.0;
+                        } else if (isBackspace) {
+                            frequency = 80; rampToFreq = 30;
+                            gainVol = 0.6; rampToGain = 0.01; duration = 0.1;
+                            filterFreq = 500; filterQ = 0.5;
+                        } else {
+                            frequency = 150 + Math.random() * 50; rampToFreq = 40;
+                            gainVol = 0.8; rampToGain = 0.01; duration = 0.06;
+                            filterFreq = 1000; filterQ = 0.5;
+                        }
+                    } else {
+                        // Original digital
+                        osc.type = 'square';
+                        frequency = isEnter ? 150 : 250;
+                        rampToFreq = 50;
+                        gainVol = isEnter ? 0.6 : 0.4;
+                        rampToGain = 0.01;
+                        duration = isEnter ? 0.1 : 0.05;
+                        filterFreq = isEnter ? 1000 : 2000;
+                        filterQ = 1.0;
+                    }
+
+                    osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+                    if (rampToFreq !== frequency) {
+                        osc.frequency.exponentialRampToValueAtTime(rampToFreq, audioCtx.currentTime + (duration / 2));
+                    }
+                    
+                    oscGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    oscGain.gain.linearRampToValueAtTime(gainVol, audioCtx.currentTime + 0.01);
+                    oscGain.gain.exponentialRampToValueAtTime(rampToGain, audioCtx.currentTime + duration);
+                    
                     filter.type = 'bandpass';
-                    filter.frequency.value = isEnter ? 1000 : 2000;
-                    filter.Q.value = 1.0;
+                    filter.frequency.value = filterFreq;
+                    filter.Q.value = filterQ;
                     
                     osc.connect(filter);
                     filter.connect(oscGain);
                     oscGain.connect(audioCtx.destination);
                     
-                    osc.start();
+                    // Add some noise for vintage mechanical feel
+                    if (typewriterSoundProfile === 'mechanical' || typewriterSoundProfile === 'vintage') {
+                        const bufferSize = audioCtx.sampleRate * duration;
+                        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                        const data = buffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            data[i] = Math.random() * 2 - 1;
+                        }
+                        const noise = audioCtx.createBufferSource();
+                        noise.buffer = buffer;
+                        const noiseFilter = audioCtx.createBiquadFilter();
+                        noiseFilter.type = typewriterSoundProfile === 'vintage' ? 'lowpass' : 'highpass';
+                        noiseFilter.frequency.value = typewriterSoundProfile === 'vintage' ? 800 : 3000;
+                        
+                        const noiseGain = audioCtx.createGain();
+                        noiseGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                        noiseGain.gain.linearRampToValueAtTime(typewriterSoundProfile === 'vintage' ? 0.4 : 0.2, audioCtx.currentTime + 0.01);
+                        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                        
+                        noise.connect(noiseFilter);
+                        noiseFilter.connect(noiseGain);
+                        noiseGain.connect(audioCtx.destination);
+                        noise.start(audioCtx.currentTime);
+                        noise.stop(audioCtx.currentTime + duration);
+                    }
+                    
+                    osc.start(audioCtx.currentTime);
                     osc.stop(audioCtx.currentTime + duration);
                 }
             }
@@ -3504,14 +3595,26 @@
         function toggleTypewriterSoundSetting() {
             const track = document.getElementById('settTypewriterSound');
             track.classList.toggle('active');
+            
             const settings = loadSettings();
             settings.typewriterSound = track.classList.contains('active');
-            saveSettings(settings);
             
-            // Ladda ljudkontexten om man slår på den aktivt
+            // Show/hide profile selection based on toggle
+            document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
+
             if (settings.typewriterSound && !audioCtx) {
                 audioCtx = new AudioContext();
             }
+
+            saveSettings(settings);
+            applySettings(settings);
+        }
+
+        function updateSoundProfileSetting() {
+            const settings = loadSettings();
+            settings.typewriterSoundProfile = document.getElementById('settTypewriterSoundProfile').value;
+            saveSettings(settings);
+            applySettings(settings);
         }
 
         function setHighlightColor(el) {
@@ -3937,6 +4040,11 @@
             }
             if (settings.typewriterSound) {
                 document.getElementById('settTypewriterSound').classList.add('active');
+                document.getElementById('soundProfileRow').style.display = 'flex';
+            }
+            if (settings.typewriterSoundProfile) {
+                document.getElementById('settTypewriterSoundProfile').value = settings.typewriterSoundProfile || 'digital';
+                document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
             }
             if (settings.fsBgType) {
                 document.getElementById('settZenBg').value = settings.fsBgType;
