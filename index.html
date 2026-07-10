@@ -2896,9 +2896,11 @@
 
             // Apply editor colors
             const fsWrap = document.getElementById('fsEditorWrap');
-            fsWrap.style.background = settings.editorBg;
-            overlay.style.background = settings.editorBg;
-            fsTa.style.color = settings.editorColor;
+            fsWrap.style.background = '';
+            overlay.style.background = '';
+            fsTa.style.color = '#ffffff'; // Tvinga fram vit färg i Zen-läget för kontrast mot den mörka skogen
+
+
             fsTa.style.fontSize = (settings.fontSize || 16) + 'px';
             const fontMap = { serif: 'var(--font-serif)', sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
             fsTa.style.fontFamily = fontMap[settings.fontFamily] || fontMap.mono;
