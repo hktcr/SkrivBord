@@ -1096,6 +1096,11 @@
             background: radial-gradient(circle at center, #2d3630 0%, #1c211d 100%);
         }
 
+        .fullscreen-overlay.bg-image {
+            background: linear-gradient(to bottom, rgba(28,33,29,0.7), rgba(28,33,29,0.85)), url('forest-bg.jpg') no-repeat center center;
+            background-size: cover;
+        }
+
         /* Dold Sidebar för Textstorlek i Fullskärm */
         .fs-sidebar {
             width: 80px;
@@ -1933,6 +1938,14 @@
                 </div>
             </div>
 
+            <div class="setting-row">
+                <label>Zen Bakgrund</label>
+                <select id="settZenBg" onchange="changeZenBg(this.value)" style="background:var(--app-bg);color:var(--text-bright);border:1px solid rgba(255,255,255,0.1);padding:4px 8px;border-radius:4px;outline:none;cursor:pointer;">
+                    <option value="gradient">Skog (Mörk gradient)</option>
+                    <option value="image">Skogslandskap (Bild)</option>
+                </select>
+            </div>
+
             <div class="settings-actions">
                 <button class="btn-reset" onclick="resetSettings()">Återställ</button>
                 <button class="btn-close-settings" onclick="closeSettings()">Stäng</button>
@@ -2051,6 +2064,7 @@
             previewColor: '#212529',
             fontSize: 22,
             fsFontSize: 32, // Större text som default i fullscreen
+            fsBgType: 'gradient',
             fontFamily: 'mono',
             editorBg: '#ffffff',
             editorColor: '#212529',
@@ -2914,6 +2928,16 @@
                 document.getElementById('fsFontSizeSlider').value = settings.fsFontSize;
                 setFsFontSize(settings.fsFontSize, false); // apply without saving settings again
             }
+
+            // Apply Zen background
+            const overlay = document.getElementById('fullscreenOverlay');
+            if (settings.fsBgType === 'image') {
+                overlay.classList.add('bg-image');
+            } else {
+                overlay.classList.remove('bg-image');
+            }
+            document.getElementById('settZenBg').value = settings.fsBgType || 'gradient';
+
             highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
             const container = document.getElementById('fsEditorContainer');
             const btnCenter = document.getElementById('btnCenterScroll');
@@ -3409,6 +3433,19 @@
             saveSettings(settings);
         }
 
+        function changeZenBg(val) {
+            const settings = loadSettings();
+            settings.fsBgType = val;
+            saveSettings(settings);
+
+            const overlay = document.getElementById('fullscreenOverlay');
+            if (val === 'image') {
+                overlay.classList.add('bg-image');
+            } else {
+                overlay.classList.remove('bg-image');
+            }
+        }
+
         function setFsWidth(val) {
             val = parseInt(val);
             const container = document.getElementById('fsEditorContainer');
@@ -3811,6 +3848,9 @@
             }
             if (settings.typewriterSound) {
                 document.getElementById('settTypewriterSound').classList.add('active');
+            }
+            if (settings.fsBgType) {
+                document.getElementById('settZenBg').value = settings.fsBgType;
             }
             // Set active highlight swatch
             const swatches = document.querySelectorAll('#highlightSwatches .color-swatch');
