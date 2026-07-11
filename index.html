@@ -2012,7 +2012,7 @@
 
             <div class="setting-row" id="soundProfileRow" style="display: none;">
                 <label>Ljudprofil</label>
-                <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: 140px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+                <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: auto; max-width: 180px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
                     <option value="digital">Digital (Lätt)</option>
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
@@ -2023,20 +2023,24 @@
             </div>
 
             <div id="valsangSettings" style="display: none; flex-direction: column; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
-                    <label>Volym (Valsång)</label>
+                <div style="font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: var(--accent);">Fokusmiljö Inställningar</div>
+                <div class="setting-row" style="margin-bottom:8px;">
+                    <label>Volym</label>
                     <input type="range" id="settValsangVol" min="0" max="1" step="0.05" value="0.6" oninput="updateValsangSettings()">
                 </div>
-                <div class="setting-row" style="margin-bottom:8px;">
-                    <label>Eko/Djup</label>
-                    <input type="range" id="settValsangDepth" min="0" max="2" step="0.1" value="1.0" oninput="updateValsangSettings()">
-                </div>
-                <div class="setting-row" style="margin-bottom:8px;">
-                    <label>Djupvatten-bakgrund (Fokusläge)</label>
-                    <div class="setting-toggle"><div class="toggle-track" id="settDjupvatten" onclick="toggleDjupvatten()"></div></div>
-                </div>
-                <div class="setting-row" style="margin-bottom:8px;">
-                    <label>Sonogram (Fokusläge)</label>
-                    <div class="setting-toggle"><div class="toggle-track" id="settSonogram" onclick="toggleSonogram()"></div></div>
+                <div id="valsangWaterSettings">
+                    <div class="setting-row" style="margin-bottom:8px;">
+                        <label>Eko/Djup</label>
+                        <input type="range" id="settValsangDepth" min="0" max="2" step="0.1" value="1.0" oninput="updateValsangSettings()">
+                    </div>
+                    <div class="setting-row" style="margin-bottom:8px;">
+                        <label>Djupvatten-bakgrund (Fokusläge)</label>
+                        <div class="setting-toggle"><div class="toggle-track" id="settDjupvatten" onclick="toggleDjupvatten()"></div></div>
+                    </div>
+                    <div class="setting-row" style="margin-bottom:8px;">
+                        <label>Sonogram (Fokusläge)</label>
+                        <div class="setting-toggle"><div class="toggle-track" id="settSonogram" onclick="toggleSonogram()"></div></div>
+                    </div>
                 </div>
                 <div class="setting-row" style="margin-bottom:0;">
                     <label>Mareld/Målanimation (Fokusläge)</label>
@@ -3737,6 +3741,7 @@
             
             const isContinuous = ['valsang', 'vindsus'].includes(settings.typewriterSoundProfile);
             document.getElementById('valsangSettings').style.display = isContinuous ? 'flex' : 'none';
+            document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
             
             if (window.ValsangEngine) window.ValsangEngine.destroy();
             if (window.VindsusEngine) window.VindsusEngine.destroy();

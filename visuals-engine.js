@@ -94,6 +94,13 @@ export const VisualsEngine = (() => {
 
     function setConfig(newConfig) {
         config = { ...config, ...newConfig };
+        
+        // Vindsus-läget tvingar bort havstemat
+        if (config.vindsusMode) {
+            config.djupvattenEnabled = false;
+            config.sonogramEnabled = false;
+        }
+        
         if (!config.djupvattenEnabled) {
             djupvattenLayers.forEach(l => l.style.opacity = '0');
             if (djupvattenContainer) djupvattenContainer.style.backgroundColor = 'transparent';
