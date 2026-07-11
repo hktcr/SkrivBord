@@ -3285,7 +3285,7 @@
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
                 if (typewriterSoundProfile === 'valsang') {
-                    if (window.ValsangEngine) window.ValsangEngine.handleKey(e.key);
+                    if (window.ValsangEngine) window.ValsangEngine.handleKey(e);
                     return; // Hoppa över vanliga ljud
                 }
                 
