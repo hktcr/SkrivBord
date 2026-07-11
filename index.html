@@ -2081,10 +2081,10 @@
     <div class="fullscreen-overlay" id="fullscreenOverlay">
         
         <!-- Valsång Background Layers -->
-        <div id="djupvattenContainer" style="position:absolute; inset:0; z-index:0; pointer-events:none; background-color: transparent;">
-            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 50% -20%, rgba(20,50,90,0.6) 0%, transparent 60%);"></div>
-            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 100% 50%, rgba(10,30,60,0.4) 0%, transparent 50%);"></div>
-            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.5s ease-out, opacity 1s; background: radial-gradient(circle at 0% 100%, rgba(15,40,75,0.3) 0%, transparent 40%);"></div>
+        <div id="djupvattenContainer" style="position:absolute; inset:0; z-index:0; pointer-events:none; background-color: transparent; overflow:hidden;">
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 0.8s ease-out, opacity 1s, filter 0.8s; background: radial-gradient(circle at 50% 50%, rgba(28, 90, 160, 0.45) 0%, transparent 65%);"></div>
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 1.2s ease-out, opacity 1s; background: radial-gradient(ellipse at 50% 50%, rgba(15, 65, 130, 0.55) 0%, transparent 75%);"></div>
+            <div class="dj-layer" style="position:absolute; inset:0; opacity:0; transition: transform 2.0s ease-in-out, opacity 1s; background: radial-gradient(circle at 50% 50%, rgba(10, 45, 90, 0.7) 0%, transparent 70%);"></div>
         </div>
         <canvas id="mareldCanvas" style="position:absolute; inset:0; z-index:1; pointer-events:none;"></canvas>
         <div id="mareldVeil" style="position:absolute; inset:0; z-index:2; pointer-events:none; background: radial-gradient(circle, transparent 20%, rgba(25,15,40,0.85) 120%); opacity:0; transition:opacity 2s;"></div>

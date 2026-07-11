@@ -228,27 +228,37 @@ export const VisualsEngine = (() => {
         if (!config.djupvattenEnabled || config.prefersReducedMotion || !getValsangState) return;
         const state = getValsangState();
         
-        // Layer 0: Ytljus
+        // Layer 0: Ytljus (Pitch)
         const l0 = djupvattenLayers[0];
         if (l0) {
             // Y: mapped from pitchNorm (0..1)
-            const y = -30 + (1 - state.pitchNorm) * 60;
-            l0.style.transform = `translate3d(0, ${y.toFixed(1)}%, 0) scale(1.2)`;
-            l0.style.opacity = state.idle ? '0.3' : '0.6';
+            const y = -40 + (1 - state.pitchNorm) * 80; // Range: -40% to +40%
+            l0.style.transform = `translate3d(0, ${y.toFixed(1)}%, 0) scale(1.8)`;
+            l0.style.opacity = state.idle ? '0.2' : '0.85';
+            l0.style.filter = `hue-rotate(${(state.pitchNorm - 0.5) * 60}deg)`;
         }
         
-        // Layer 1: Ström
+        // Layer 1: Ström (Tempo)
         const l1 = djupvattenLayers[1];
         if (l1) {
             // Moves horizontally based on tempoNorm
-            const speed = 20 + state.tempoNorm * 40; // 20s to 60s full cycle
+            const speed = 10 + state.tempoNorm * 15; // 10s to 25s
             const t = (performance.now() / (speed * 1000)) % 1;
-            const x = -50 + t * 100;
-            l1.style.transform = `translate3d(${x.toFixed(1)}%, 10%, 0) scale(1.5)`;
-            l1.style.opacity = state.idle ? '0.1' : '0.4';
+            const x = -30 + Math.sin(t * Math.PI * 2) * 60; // -90% to +30%
+            const y = Math.cos(t * Math.PI * 2) * 20;
+            l1.style.transform = `translate3d(${x.toFixed(1)}%, ${y.toFixed(1)}%, 0) scale(2.2)`;
+            l1.style.opacity = state.idle ? '0.3' : '0.9';
         }
         
-        // Layer 2: Eko-sken (skip for now, would need trigger from Valsang)
+        // Layer 2: Djupet (Pulse)
+        const l2 = djupvattenLayers[2];
+        if (l2) {
+            // Very slow pulse
+            const t = (performance.now() / 12000) % 1;
+            const s = 1.5 + Math.sin(t * Math.PI * 2) * 0.4 + (state.idle ? 0 : 0.3);
+            l2.style.transform = `translate3d(0, 0, 0) scale(${s.toFixed(2)})`;
+            l2.style.opacity = state.idle ? '0.4' : '1.0';
+        }
     }
 
     function triggerDive() {
