@@ -1785,6 +1785,10 @@
 </head>
 
 <body>
+    <!-- VALSÅNG ENGINE & VINDSUS ENGINE -->
+    <script src="valsang-engine.js"></script>
+    <script src="vindsus-engine.js"></script>
+    
     <div id="toastContainer"></div>
 
     <!-- TOOLBAR -->
@@ -2013,11 +2017,12 @@
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
                     <option value="valsang">Valsång (Kontinuerlig)</option>
+                    <option value="vindsus">Vindsus (Kontinuerlig)</option>
                 </select>
+                <div class="setting-desc">OBS: Gäller endast i fullskärmsläge.</div>
             </div>
 
             <div id="valsangSettings" style="display: none; flex-direction: column; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;">
-                <div class="setting-row" style="margin-bottom:8px;">
                     <label>Volym (Valsång)</label>
                     <input type="range" id="settValsangVol" min="0" max="1" step="0.05" value="0.6" oninput="updateValsangSettings()">
                 </div>
@@ -3136,15 +3141,27 @@
             buildOutline();
             startZenTimer();
 
-            // Initiera Valsång om det är valt
-            if (typewriterSoundProfile === 'valsang' && typewriterSoundEnabled) {
+            // Initiera Valsång/Vindsus om det är valt
+            if ((typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'vindsus') && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-                if (window.ValsangEngine) {
+                if (typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
                     window.ValsangEngine.init(audioCtx);
                     window.ValsangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                     window.ValsangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
                 }
+                if (typewriterSoundProfile === 'vindsus' && window.VindsusEngine) {
+                    window.VindsusEngine.init(audioCtx, audioCtx.destination);
+                    window.VindsusEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                }
+            }
+            
+            // Hantera visuell Vindsus-nattbakgrund (Skogsglänta i sommarnatt)
+            if (typewriterSoundProfile === 'vindsus') {
+                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
+                overlay.style.backgroundSize = 'cover';
+            } else if (settings.bgType === 'image') {
+                overlay.style.background = ""; // Återställ
             }
             
             // Initiera VisualsEngine
@@ -3161,11 +3178,13 @@
                     sonogramEnabled: settings.valsangSonogram !== false,
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
+                    vindsusMode: (typewriterSoundProfile === 'vindsus'),
+                    goalProgress: window._currentGoalProgress || 0,
                     theme: 'dark'
                 });
                 
-                // Bara kör om Valsång är valt
-                if (typewriterSoundProfile === 'valsang' && typewriterSoundEnabled) {
+                // Bara kör om Valsång eller Vindsus är valt
+                if ((typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'vindsus') && typewriterSoundEnabled) {
                     window.VisualsEngine.start();
                 }
             }
@@ -3197,9 +3216,13 @@
             if (window.ValsangEngine) {
                 window.ValsangEngine.destroy();
             }
+            if (window.VindsusEngine) {
+                window.VindsusEngine.destroy();
+            }
             if (window.VisualsEngine) {
                 window.VisualsEngine.stop();
             }
+            overlay.style.background = ""; // Återställ vindsus-bakgrund
 
             // Exit browser fullscreen if active
             if (document.fullscreenElement) {
@@ -3258,10 +3281,13 @@
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
                 if (typewriterSoundProfile === 'valsang') {
-                    if (window.ValsangEngine) {
-                        window.ValsangEngine.handleKey(e);
-                    }
+                    if (window.ValsangEngine) window.ValsangEngine.handleKey(e.key);
                     return; // Hoppa över vanliga ljud
+                }
+                
+                if (typewriterSoundProfile === 'vindsus') {
+                    if (window.VindsusEngine) window.VindsusEngine.handleKey(e.key);
+                    return;
                 }
                 
                 if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -3709,12 +3735,34 @@
             saveSettings(settings);
             applySettings(settings);
             
-            document.getElementById('valsangSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'flex' : 'none';
-            if (window.ValsangEngine) {
-                if (settings.typewriterSoundProfile === 'valsang' && settings.typewriterSound && isFullscreen) {
+            const isContinuous = ['valsang', 'vindsus'].includes(settings.typewriterSoundProfile);
+            document.getElementById('valsangSettings').style.display = isContinuous ? 'flex' : 'none';
+            
+            if (window.ValsangEngine) window.ValsangEngine.destroy();
+            if (window.VindsusEngine) window.VindsusEngine.destroy();
+            
+            if (isContinuous && settings.typewriterSound && isFullscreen) {
+                if (settings.typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
                     window.ValsangEngine.init(audioCtx);
+                } else if (settings.typewriterSoundProfile === 'vindsus' && window.VindsusEngine) {
+                    window.VindsusEngine.init(audioCtx, audioCtx.destination);
+                }
+                if (window.VisualsEngine) {
+                    window.VisualsEngine.setConfig({ vindsusMode: (settings.typewriterSoundProfile === 'vindsus') });
+                    window.VisualsEngine.start();
+                }
+            } else {
+                if (window.VisualsEngine) window.VisualsEngine.stop();
+            }
+            
+            // Uppdatera bakgrund direkt om vi är i fullscreen
+            if (isFullscreen) {
+                const overlay = document.getElementById('fullscreenOverlay');
+                if (settings.typewriterSoundProfile === 'vindsus') {
+                    overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
+                    overlay.style.backgroundSize = 'cover';
                 } else {
-                    window.ValsangEngine.destroy();
+                    overlay.style.background = ""; 
                 }
             }
         }
@@ -3728,6 +3776,9 @@
             if (window.ValsangEngine) {
                 window.ValsangEngine.setVolume(settings.valsangVol);
                 window.ValsangEngine.setDepth(settings.valsangDepth);
+            }
+            if (window.VindsusEngine) {
+                window.VindsusEngine.setVolume(settings.valsangVol);
             }
         }
         
@@ -4051,8 +4102,14 @@
                 current = content.length;
             }
 
-            const pct = Math.min(100, Math.round((current / goal.target) * 100));
+            const progressRaw = Math.min(1, Math.max(0, current / goal.target));
+            const pct = Math.round(progressRaw * 100);
             const unit = goal.type === 'words' ? 'ord' : 'tecken';
+            
+            window._currentGoalProgress = progressRaw;
+            if (window.VisualsEngine) {
+                window.VisualsEngine.setConfig({ goalProgress: progressRaw });
+            }
 
             // Status bar
             const fill = document.getElementById('goalFill');

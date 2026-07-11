@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Årshjul: Mindre flugsnappare (Skåne, 2000-2026)</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --accent: #38bdf8;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        h1 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .svg-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            aspect-ratio: 1;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(15, 23, 42, 0.9);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            z-index: 10;
+            transform: translate(-50%, -100%);
+            white-space: nowrap;
+        }
+
+        .tooltip strong {
+            display: block;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mindre flugsnappare</h1>
+        <p class="subtitle">Ficedula parva</p>
+        
+        <div class="description">
+            Visar observationer i <strong>Skåne län</strong> mellan åren <strong>2000 och 2026</strong>. 
+            Mindre flugsnappare är en sällsynt art som brukar anlända till Skåne runt mitten av maj, men de flesta observationerna görs under höststräcket i september.
+            Data hämtad direkt från Artportalen via SOS API.
+        </div>
+
+        <div class="svg-wrapper" id="svg-container">
+            <!-- SVG will be injected here -->
+            <div id="tooltip" class="tooltip">
+                <strong id="tooltip-date">Datum</strong>
+                <span id="tooltip-count">Info</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data generated from API request
+        const speciesData = {"09-16": 10, "06-13": 3, "09-01": 7, "08-26": 4, "09-11": 13, "05-14": 13, "09-23": 17, "05-20": 16, "05-28": 11, "09-20": 15, "08-30": 6, "09-09": 14, "09-15": 12, "10-06": 7, "09-07": 9, "07-22": 1, "09-24": 16, "09-21": 20, "06-03": 11, "09-05": 8, "09-06": 12, "05-27": 8, "08-27": 5, "06-12": 5, "10-07": 11, "05-06": 5, "09-14": 16, "09-29": 12, "05-01": 2, "05-25": 12, "05-11": 7, "05-21": 12, "09-12": 14, "06-26": 1, "06-01": 10, "05-23": 15, "10-22": 2, "09-22": 15, "08-07": 3, "09-08": 11, "05-09": 8, "08-28": 5, "06-02": 11, "09-13": 15, "10-15": 3, "09-28": 15, "10-27": 2, "05-04": 2, "05-17": 14, "09-25": 13, "07-05": 2, "09-17": 14, "09-27": 16, "05-15": 9, "05-26": 14, "09-19": 14, "05-07": 5, "07-07": 1, "05-29": 12, "06-04": 9, "08-24": 4, "10-20": 2, "09-03": 9, "09-02": 10, "09-04": 7, "10-01": 15, "09-18": 17, "05-22": 14, "08-25": 3, "10-10": 6, "10-05": 11, "10-16": 3, "09-30": 13, "10-08": 13, "08-31": 7, "05-12": 10, "05-16": 8, "09-26": 15, "09-10": 15, "10-17": 3, "05-10": 5, "07-25": 2, "05-24": 9, "06-05": 9, "06-30": 1, "10-21": 4, "10-09": 6, "10-03": 13, "10-02": 12, "06-16": 4, "05-19": 10, "08-05": 1, "05-18": 10, "08-19": 4, "08-21": 2, "06-18": 4, "06-19": 3, "05-31": 11, "06-07": 3, "08-10": 1, "08-29": 6, "06-17": 2, "08-23": 3, "05-08": 7, "10-13": 5, "08-17": 1, "10-04": 8, "07-01": 1, "07-13": 3, "10-24": 1, "10-18": 3, "06-22": 2, "05-30": 6, "10-30": 1, "10-11": 3, "11-25": 1, "07-08": 1, "05-13": 7, "10-25": 1, "07-20": 2, "07-03": 2, "10-28": 1, "07-27": 1, "05-03": 2, "05-02": 1, "05-05": 3, "06-09": 4, "08-18": 2, "11-13": 1, "08-14": 2, "10-12": 4, "07-28": 2, "07-17": 1, "06-11": 4, "07-16": 1, "07-02": 2, "10-14": 1, "06-27": 1, "06-15": 2, "06-14": 2, "07-30": 2, "06-21": 2, "08-01": 2, "06-10": 2, "08-13": 1, "08-20": 1, "08-06": 1, "11-02": 1, "06-23": 2, "08-04": 1, "06-24": 1, "06-20": 1, "11-08": 1, "06-29": 1, "08-22": 1, "11-04": 1, "07-14": 1, "07-06": 1, "06-06": 1, "06-08": 1};
+
+        // Pre-calculate Calendar Data
+        const currentYear = new Date().getFullYear();
+        const isLeapYear = (currentYear % 4 === 0 && currentYear % 100 !== 0) || (currentYear % 400 === 0);
+        const daysInMonths = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+        const totalDays = isLeapYear ? 366 : 365;
+        const dayAngles = [];
+        let currentDayOfYear = 0;
+
+        for (let m = 0; m < 12; m++) {
+            for (let d = 1; d <= daysInMonths[m]; d++) {
+                const startAngle = (currentDayOfYear / totalDays) * 360 + 180;
+                const endAngle = ((currentDayOfYear + 1) / totalDays) * 360 + 180;
+                const mm = (m + 1).toString().padStart(2, '0');
+                const dd = d.toString().padStart(2, '0');
+                dayAngles.push({
+                    month: m + 1,
+                    day: d,
+                    key: `${mm}-${dd}`,
+                    startAngle: startAngle,
+                    endAngle: endAngle
+                });
+                currentDayOfYear++;
+            }
+        }
+
+        function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+            var angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+            return {
+                x: centerX + (radius * Math.cos(angleInRadians)),
+                y: centerY + (radius * Math.sin(angleInRadians))
+            };
+        }
+
+        function describeAnnularSegment(cx, cy, innerR, outerR, startAngle, endAngle) {
+            const p1 = polarToCartesian(cx, cy, outerR, startAngle);
+            const p2 = polarToCartesian(cx, cy, outerR, endAngle);
+            const p3 = polarToCartesian(cx, cy, innerR, endAngle);
+            const p4 = polarToCartesian(cx, cy, innerR, startAngle);
+            const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+            return [
+                "M", p1.x, p1.y,
+                "A", outerR, outerR, 0, largeArc, 1, p2.x, p2.y,
+                "L", p3.x, p3.y,
+                "A", innerR, innerR, 0, largeArc, 0, p4.x, p4.y,
+                "Z"
+            ].join(" ");
+        }
+
+        // Use a higher max years since we have 26 years of data, maybe 10 is max saturation
+        const GLOBAL_MAX_YEARS = 10;
+
+        function getColor(month, count) {
+            if (count === 0) return "none";
+            const intensity = Math.min(1, count / GLOBAL_MAX_YEARS);
+
+            if (month >= 3 && month <= 5) {
+                // Spring
+                const lightness = 85 - (35 * intensity);
+                return `hsl(140, 60%, ${lightness}%)`;
+            } else if (month >= 6 && month <= 8) {
+                // Summer
+                const lightness = 85 - (35 * intensity);
+                return `hsl(45, 100%, ${lightness}%)`;
+            } else if (month >= 9 && month <= 11) {
+                // Autumn
+                const lightness = 85 - (35 * intensity);
+                return `hsl(15, 80%, ${lightness}%)`;
+            } else {
+                // Winter
+                const lightness = 85 - (35 * intensity);
+                return `hsl(210, 80%, ${lightness}%)`;
+            }
+        }
+
+        function createSVG(data) {
+            const innerRadius = 80;
+            const outerRadius = 100;
+            
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("viewBox", "-120 -120 240 240");
+            svg.style.width = "100%";
+            svg.style.height = "100%";
+            svg.style.display = "block";
+            svg.style.overflow = "visible";
+
+            // Dark mode background track
+            const bg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            bg.setAttribute("cx", "0");
+            bg.setAttribute("cy", "0");
+            bg.setAttribute("r", "90");
+            bg.setAttribute("fill", "none");
+            bg.setAttribute("stroke", "#334155");
+            bg.setAttribute("stroke-width", "20");
+            svg.appendChild(bg);
+
+            let curDay = 0;
+            for (let m = 0; m < 12; m++) {
+                const monthStartAngle = (curDay / totalDays) * 360 + 180;
+                const divider = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                const p1 = polarToCartesian(0, 0, innerRadius - 5, monthStartAngle);
+                const p2 = polarToCartesian(0, 0, outerRadius + 5, monthStartAngle);
+                divider.setAttribute("x1", p1.x);
+                divider.setAttribute("y1", p1.y);
+                divider.setAttribute("x2", p2.x);
+                divider.setAttribute("y2", p2.y);
+                divider.setAttribute("stroke", "#475569");
+                divider.setAttribute("stroke-width", "1");
+                svg.appendChild(divider);
+
+                const labelMidAngle = monthStartAngle + ((daysInMonths[m] / totalDays) * 360) / 2;
+                const labelPos = polarToCartesian(0, 0, outerRadius + 15, labelMidAngle);
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", labelPos.x);
+                label.setAttribute("y", labelPos.y);
+                label.setAttribute("text-anchor", "middle");
+                label.setAttribute("dominant-baseline", "middle");
+                label.setAttribute("font-size", "8");
+                label.setAttribute("fill", "#94a3b8");
+                label.textContent = monthNames[m];
+                svg.appendChild(label);
+
+                curDay += daysInMonths[m];
+            }
+
+            let activeDays = 0;
+            for (const key in data) {
+                if (data[key] > 0) activeDays++;
+            }
+
+            const textCount = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textCount.setAttribute("x", "0");
+            textCount.setAttribute("y", "0");
+            textCount.setAttribute("text-anchor", "middle");
+            textCount.setAttribute("dominant-baseline", "middle");
+            textCount.setAttribute("font-size", "24");
+            textCount.setAttribute("font-weight", "bold");
+            textCount.setAttribute("fill", "#f8fafc");
+            textCount.textContent = activeDays;
+            svg.appendChild(textCount);
+
+            const textLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textLabel.setAttribute("x", "0");
+            textLabel.setAttribute("y", "20");
+            textLabel.setAttribute("text-anchor", "middle");
+            textLabel.setAttribute("font-size", "10");
+            textLabel.setAttribute("fill", "#94a3b8");
+            textLabel.textContent = "Dagar";
+            svg.appendChild(textLabel);
+
+            const segmentsGrp = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            svg.appendChild(segmentsGrp);
+
+            const tooltip = document.getElementById("tooltip");
+            const tooltipDate = document.getElementById("tooltip-date");
+            const tooltipCount = document.getElementById("tooltip-count");
+            const container = document.getElementById("svg-container");
+
+            dayAngles.forEach(da => {
+                const count = data[da.key] || 0;
+                if (count > 0) {
+                    const color = getColor(da.month, count);
+                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute("d", describeAnnularSegment(0, 0, innerRadius, outerRadius, da.startAngle - 0.2, da.endAngle + 0.2));
+                    path.setAttribute("fill", color);
+                    path.style.transition = "fill 0.2s";
+                    path.style.cursor = "crosshair";
+
+                    path.addEventListener("mouseenter", (e) => {
+                        path.setAttribute("fill", "#38bdf8"); // Highlight color
+
+                        tooltipDate.textContent = `${da.day} ${monthNames[da.month - 1]}`;
+                        tooltipCount.textContent = `Observerats under ${count} olika år sedan 2000`;
+
+                        const rect = container.getBoundingClientRect();
+                        tooltip.style.left = `${e.clientX - rect.left}px`;
+                        tooltip.style.top = `${e.clientY - rect.top - 15}px`;
+                        tooltip.style.opacity = 1;
+                    });
+
+                    path.addEventListener("mouseleave", () => {
+                        path.setAttribute("fill", color);
+                        tooltip.style.opacity = 0;
+                    });
+
+                    segmentsGrp.appendChild(path);
+                }
+            });
+
+            // Today marker
+            const now = new Date();
+            const startOfYear = new Date(now.getFullYear(), 0, 0);
+            const diff = now - startOfYear;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const todayDOY = Math.floor(diff / oneDay) - 1;
+            const todayAngle = (todayDOY / totalDays) * 360 + 180;
+            const tickInner = polarToCartesian(0, 0, outerRadius + 3, todayAngle);
+            const tickOuter = polarToCartesian(0, 0, outerRadius + 12, todayAngle);
+            const todayTick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            todayTick.setAttribute("x1", tickInner.x);
+            todayTick.setAttribute("y1", tickInner.y);
+            todayTick.setAttribute("x2", tickOuter.x);
+            todayTick.setAttribute("y2", tickOuter.y);
+            todayTick.setAttribute("stroke", "#ef4444");
+            todayTick.setAttribute("stroke-width", "3");
+            todayTick.setAttribute("stroke-linecap", "round");
+            svg.appendChild(todayTick);
+
+            return svg;
+        }
+
+        const container = document.getElementById("svg-container");
+        const tooltip = document.getElementById("tooltip");
+        const svgElement = createSVG(speciesData);
+        // Insert SVG before the tooltip
+        container.insertBefore(svgElement, tooltip);
+
+    </script>
+</body>
+</html>

@@ -31,8 +31,10 @@ export const ValsangEngine = (() => {
     
     // Timing and Breathing
     let lastKeyTime = 0;
-    let dtEma = 420;
-    let isIdle = false;
+    let dtEma = 200; // Exponential moving average of time between keystrokes
+    
+    let currentChordDegree = 0;
+    let chordTimer = null;
     let charsSinceStart = 0;
     
     let idleLFO = null;
@@ -162,11 +164,19 @@ export const ValsangEngine = (() => {
         
         isIdle = false;
         lastKeyTime = performance.now();
+        
+        if (chordTimer) clearInterval(chordTimer);
+        chordTimer = setInterval(() => {
+            if (isIdle) return;
+            const chords = [0, 2, -1, 3, 4]; // Pentatonic offsets for 'chords'
+            currentChordDegree = chords[Math.floor(Math.random() * chords.length)];
+        }, 12000); // Change harmony every 12 seconds
     }
 
     function destroy() {
         if (!ctx) return;
         clearTimeout(idleTimer);
+        if (chordTimer) clearInterval(chordTimer);
         try {
             voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop();
             if (idleLFO) idleLFO.stop();
@@ -433,28 +443,25 @@ export const ValsangEngine = (() => {
             osc.stop(ctx.currentTime + 0.12);
             
         } else if (ALPHABET.includes(lowKey)) {
-            const idx = ALPHABET.indexOf(lowKey);
+            const isVowel = ['a','o','u','å','e','i','y','ä','ö'].includes(lowKey);
             
-            if (charsSinceStart % 90 === 0) {
-                const dir = (Math.floor(charsSinceStart/90) % 2 === 0) ? 1 : -1;
-                rootMidi = clamp(rootMidi + dir, 38, 46);
+            // Smart harmonization: smooth pentatonic walk biased toward current harmony
+            const targetBase = 5 + currentChordDegree; // Focus around middle octave + chord offset
+            
+            let jump = 0;
+            if (currentDegree > targetBase + 2) jump = -1;
+            else if (currentDegree < targetBase - 2) jump = 1;
+            else {
+                // If in zone, small smooth steps
+                if (Math.random() > 0.4) jump = (Math.random() > 0.5 ? 1 : -1);
             }
             
-            if (prevAlphaIdx !== null) {
-                const diff = idx - prevAlphaIdx;
-                let steps = clamp(Math.round(diff / 5), -3, 3);
-                if (steps === 0 && diff !== 0) steps = Math.sign(diff);
-                
-                let nextDeg = currentDegree + steps;
-                if (nextDeg < 0 || nextDeg > 12) {
-                    nextDeg = clamp(currentDegree - 2 * steps, 0, 12);
-                }
-                currentDegree = nextDeg;
-            }
-            prevAlphaIdx = idx;
+            currentDegree = clamp(currentDegree + jump, 0, 15);
             
             const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
-            const isVowel = 'aeiouyåäö'.includes(lowKey);
+            
+            const glideTime = isVowel ? 0.6 : 0.3;
+            const releaseTC = isVowel ? 1.5 : 0.8;
             const isCapital = (key !== lowKey);
             
             let traceType = isVowel ? 'vowel' : 'cons';

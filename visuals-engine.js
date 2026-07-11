@@ -16,10 +16,11 @@ export const VisualsEngine = (() => {
         sonogramEnabled: false,
         djupvattenEnabled: false,
         mareldEnabled: false,
-        mareldGoalTarget: 0,
         mareldGoalType: 'words', // 'words' or 'time'
         mareldStartTime: 0,
         mareldStartChars: 0,
+        vindsusMode: false,
+        goalProgress: 0,
         prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
@@ -206,22 +207,48 @@ export const VisualsEngine = (() => {
     }
 
     function spawnSparks(count, intensity) {
+        if (config.vindsusMode) {
+            count = Math.max(1, Math.floor(count / 2)); // Färre eldflugor vid tangenttryck
+        }
+        
         let spawned = 0;
         for (let i = 0; i < sparks.length; i++) {
             if (!sparks[i].active) {
-                sparks[i] = {
-                    active: true,
-                    x: Math.random() * window.innerWidth,
-                    y: window.innerHeight * (0.3 + 0.5 * Math.random()), // 30-80% height
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: -30 - Math.random() * 40,
-                    life: 0.8 + Math.random() * 1.2 + intensity,
-                    maxLife: 0.8 + Math.random() * 1.2 + intensity
-                };
+                const s = sparks[i];
+                s.active = true;
+                s.x = Math.random() * window.innerWidth;
+                s.y = window.innerHeight * (0.3 + 0.5 * Math.random()); // 30-80% height
+                
+                if (config.vindsusMode) {
+                    s.vx = (Math.random() * 30 + 10) * (Math.random() > 0.5 ? 1 : -1);
+                    s.vy = -Math.random() * 20 - 5;
+                    s.maxLife = Math.random() * 4 + 3 + intensity * 2;
+                    s.life = s.maxLife;
+                } else {
+                    s.vx = (Math.random() - 0.5) * 20;
+                    s.vy = -30 - Math.random() * 40;
+                    s.maxLife = 0.8 + Math.random() * 1.2 + intensity;
+                    s.life = s.maxLife;
+                }
+                
                 spawned++;
                 if (spawned >= count) break;
             }
         }
+    }
+    
+    function spawnAmbientEldfluga() {
+        let emptyIdx = sparks.findIndex(s => !s.active);
+        if (emptyIdx === -1) emptyIdx = Math.floor(Math.random() * sparks.length);
+        
+        const s = sparks[emptyIdx];
+        s.active = true;
+        s.x = Math.random() * window.innerWidth;
+        s.y = Math.random() * window.innerHeight;
+        s.vx = (Math.random() * 20 + 5) * (Math.random() > 0.5 ? 1 : -1);
+        s.vy = -Math.random() * 15 - 2;
+        s.maxLife = Math.random() * 6 + 4;
+        s.life = s.maxLife;
     }
 
     function updateDjupvatten() {
@@ -299,27 +326,51 @@ export const VisualsEngine = (() => {
             let activeSparks = 0;
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
+            // Ambient spawn for Eldflugor based on goal progress
+            if (config.vindsusMode && config.goalProgress > 0) {
+                const targetAmbient = Math.floor(config.goalProgress * 60); // Up to 60 fireflies at 100%
+                let currentAmbient = sparks.filter(s => s.active).length;
+                if (currentAmbient < targetAmbient && Math.random() < 0.05) {
+                    spawnAmbientEldfluga();
+                }
+            }
+            
             for (let i = 0; i < sparks.length; i++) {
                 const s = sparks[i];
                 if (s.active) {
                     s.x += s.vx * dt;
                     s.y += s.vy * dt;
+                    
+                    if (config.vindsusMode) {
+                        s.x += Math.sin(time/1000 + i) * 0.5; // Flutter
+                        s.y += Math.cos(time/1200 + i) * 0.3;
+                    }
+                    
                     s.life -= dt;
                     if (s.life <= 0) {
                         s.active = false;
                     } else {
                         activeSparks++;
                         const alpha = s.life / s.maxLife;
-                        const radius = 2 + (1 - alpha) * 2;
                         
                         mareldCtx.beginPath();
-                        mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-                        mareldCtx.fillStyle = `rgba(124, 247, 212, ${alpha.toFixed(2)})`; // #7cf7d4
+                        if (config.vindsusMode) {
+                            // Eldflugor (Fireflies)
+                            const pulse = Math.abs(Math.sin((s.maxLife - s.life) * 3));
+                            const radius = 1 + pulse * 2.5;
+                            mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+                            mareldCtx.fillStyle = `rgba(200, 255, 120, ${alpha.toFixed(2)})`; // Yellowish green
+                        } else {
+                            // Mareld (Sea sparkle)
+                            const radius = 2 + (1 - alpha) * 2;
+                            mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+                            mareldCtx.fillStyle = `rgba(124, 247, 212, ${alpha.toFixed(2)})`; // Cyan
+                        }
                         mareldCtx.fill();
                     }
                 }
             }
-            if (activeSparks > 0) needsNextFrame = true;
+            if (activeSparks > 0 || (config.vindsusMode && config.goalProgress > 0)) needsNextFrame = true;
         }
 
         // Render Sonogram
