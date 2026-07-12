@@ -1,9 +1,9 @@
 /**
- * ValsangEngine
+ * ValsangEngine (BYGGSPEC v4)
  * 
  * En ljudmotor för SkrivR baserad på Web Audio API. 
  * Skapar ett kontinuerligt, dynamiskt fokusljud där melodi, andning 
- * och rum formas av vad och hur man skriver.
+ * och rum formas av vad och hur man skriver enligt Kontextprincipen.
  */
 
 export const ValsangEngine = (() => {
@@ -19,23 +19,19 @@ export const ValsangEngine = (() => {
     // State
     const ALPHABET = "abcdefghijklmnopqrstuvwxyzåäö";
     const SCALES = {
-        odd: [0, 3, 5, 7, 10],   // moll-pentatonisk
-        even: [0, 2, 5, 7, 9]    // dur/sus-pentatonisk
+        moll: [0, 3, 5, 7, 10],   // moll-pentatonisk
+        dur: [0, 2, 5, 7, 9]      // dur/sus-pentatonisk
     };
     
     let rootMidi = 43; // G2
+    let degreeFloat = 4.0;
     let currentDegree = 4;
-    let currentVerse = 0;
     let prevAlphaIdx = null;
     let sentenceBuffer = [];
     
     // Timing and Breathing
     let lastKeyTime = 0;
-    let dtEma = 200; // Exponential moving average of time between keystrokes
-    
-    let currentChordDegree = 0;
-    let chordTimer = null;
-    let charsSinceStart = 0;
+    let dtEma = 420; // Start at 420 per spec
     
     let idleLFO = null;
     let idleGain = null;
@@ -43,22 +39,26 @@ export const ValsangEngine = (() => {
     let isIdle = true;
     
     let onTraceCallback = null;
+    let isDurScale = false;
 
     // Helper functions
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
     const lerp = (a, b, t) => a + (b - a) * t;
     const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
     
-    const getScale = () => (currentVerse % 2 !== 0) ? SCALES.odd : SCALES.even;
+    const getScale = () => isDurScale ? SCALES.dur : SCALES.moll;
     const degreeToMidi = (deg, root) => {
         const octave = Math.floor(deg / 5);
         const scale = getScale();
-        const note = scale[deg % 5];
+        // Handle negative degrees correctly by wrapping
+        let modDegree = deg % 5;
+        if (modDegree < 0) modDegree += 5;
+        const note = scale[modDegree];
         return root + 12 * octave + note;
     };
 
     const createNoiseBuffer = () => {
-        const bufferSize = ctx.sampleRate * 2.0; // 2 seconds of noise
+        const bufferSize = ctx.sampleRate * 2.0;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const output = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -165,19 +165,11 @@ export const ValsangEngine = (() => {
         
         isIdle = false;
         lastKeyTime = performance.now();
-        
-        if (chordTimer) clearInterval(chordTimer);
-        chordTimer = setInterval(() => {
-            if (isIdle) return;
-            const chords = [0, 2, -1, 3, 4]; // Pentatonic offsets for 'chords'
-            currentChordDegree = chords[Math.floor(Math.random() * chords.length)];
-        }, 12000); // Change harmony every 12 seconds
     }
 
     function destroy() {
         if (!ctx) return;
         clearTimeout(idleTimer);
-        if (chordTimer) clearInterval(chordTimer);
         try {
             voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop();
             if (idleLFO) idleLFO.stop();
@@ -195,8 +187,9 @@ export const ValsangEngine = (() => {
 
     let depthMultiplier = 1.0;
     
-    // Play transient sounds (clicks, swishes)
+    // Play transient sounds
     function playTransient(type, freq, q, gainVol, duration, routing) {
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         
@@ -233,9 +226,10 @@ export const ValsangEngine = (() => {
     }
     
     function playEchoPhrase(phrasePoints, exclamation) {
+        if (!ctx) return;
         const phraseDur = phrasePoints.length * 0.4;
         const gainVol = exclamation ? 0.075 : 0.05;
-        const pan = (Math.random() - 0.5); // ±0.5
+        const pan = (Math.random() - 0.5); // ±0.5 (Enda slumpen, panorering)
         
         const echoOsc = ctx.createOscillator();
         echoOsc.type = 'sine';
@@ -282,7 +276,7 @@ export const ValsangEngine = (() => {
         if (!ctx) return stateObj;
         stateObj.pitchNorm = clamp(currentDegree / 12, 0, 1);
         stateObj.tempoNorm = clamp((dtEma - 90) / (1400 - 90), 0, 1);
-        stateObj.verse = currentVerse;
+        stateObj.verse = 0; // Not used exactly as before, but mapped in visuals maybe
         stateObj.idle = isIdle;
         return stateObj;
     }
@@ -311,6 +305,14 @@ export const ValsangEngine = (() => {
                 idleLFO.start();
             }
             idleGain.gain.setTargetAtTime(45, ctx.currentTime, 2.0); // ±45 cent
+
+            // Glid till centerDegree vid vila
+            const stats = window.TextContext ? window.TextContext.getStats() : { meanAlpha: 14 };
+            const centerDegree = 2 + (stats.meanAlpha / 28) * 8;
+            const targetFreq = midiToFreq(degreeToMidi(Math.round(centerDegree), rootMidi));
+            voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 4.0);
+            voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 4.0);
+            subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, 4.0);
         }, 5000);
     }
 
@@ -323,10 +325,18 @@ export const ValsangEngine = (() => {
         const dt = clamp(now - lastKeyTime, 60, 2000);
         lastKeyTime = now;
         
+        // 9.5 Glidtid och andning
         dtEma = 0.72 * dtEma + 0.28 * dt;
         const x = clamp((dtEma - 90) / (1400 - 90), 0, 1);
-        const glideTime = lerp(0.06, 0.55, x);
+        const glideTempo = lerp(0.06, 0.55, x);
         const releaseTC = lerp(0.35, 2.2, x);
+        
+        // Kontext från TextContext
+        const stats = window.TextContext ? window.TextContext.getStats() : { g: 1, meanAlpha: 14, vowelRatio: 0.38, paragraphs: 0 };
+        const N = stats.N || 0;
+        const g = stats.g;
+
+        const glide = glideTempo * (1 + 2 * N / (N + 400));
         
         vibratoLFO.frequency.setTargetAtTime(lerp(4.5, 0.18, x), ctx.currentTime, 0.1);
         vibratoGain.gain.setTargetAtTime(lerp(4, 18, x), ctx.currentTime, 0.1);
@@ -334,12 +344,25 @@ export const ValsangEngine = (() => {
         
         wakeUp();
 
+        // 9.4 Skalfärg och tonart
+        if (stats.vowelRatio > 0.44 && !isDurScale) isDurScale = true;
+        if (stats.vowelRatio < 0.40 && isDurScale) isDurScale = false;
+
+        const verseSteps = [0, -3, 2, -5, 4];
+        const newRootMidi = clamp(41 + verseSteps[stats.paragraphs % 5], 36, 48);
+        if (newRootMidi !== rootMidi) {
+            rootMidi = newRootMidi; // Glids per automatik på nästa frequency set
+        }
+
         const key = e.key || "";
         if (!key) return;
         const lowKey = key.toLowerCase();
-        charsSinceStart++;
+        const isCapital = (key !== lowKey);
+
+        const centerDegree = 2 + (stats.meanAlpha / 28) * 8;
 
         if (key === 'Enter') {
+            degreeFloat = 0;
             currentDegree = 0;
             const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
             voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.9);
@@ -350,15 +373,7 @@ export const ValsangEngine = (() => {
             voiceGain.gain.setTargetAtTime(0, ctx.currentTime + 0.2, 2.5);
             
             emitTrace(degreeToMidi(currentDegree, rootMidi), 'dive', 900);
-            
-            setTimeout(() => {
-                if (!ctx) return;
-                currentVerse++;
-                const verseSteps = [0, -3, 2, -5, 4];
-                rootMidi = clamp(41 + verseSteps[currentVerse % 5], 36, 48);
-                currentDegree = 4;
-                prevAlphaIdx = null;
-            }, 900);
+            prevAlphaIdx = null;
             
         } else if (key === 'Backspace') {
             voiceOsc1.detune.setValueAtTime(0, ctx.currentTime);
@@ -373,23 +388,18 @@ export const ValsangEngine = (() => {
         } else if (key === ' ') {
             const currentVol = voiceGain.gain.value;
             voiceGain.gain.setTargetAtTime(Math.max(0.02, currentVol * 0.3), ctx.currentTime, 0.05);
-            if (Math.random() < 0.4) {
-                currentDegree = currentDegree > 6 ? currentDegree - 1 : currentDegree < 6 ? currentDegree + 1 : 6;
-                const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
-                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime);
-                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime);
-                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glideTime);
-            }
+            // Inget degree-hopp per mellanslag. Gravitation drar vid vila eller nästa bokstav.
             
         } else if (/[.,;:!?]/.test(key)) {
             if (key === '?' || key === '.' || key === '!') {
-                if (key === '?') currentDegree = clamp(currentDegree + 2, 0, 12);
-                else currentDegree = Math.floor(currentDegree / 5) * 5; // tonika under
+                // Suck vid meningsslut
+                degreeFloat -= 1;
+                currentDegree = Math.round(degreeFloat);
                 
                 const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
-                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 1.6);
-                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 1.6);
-                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glideTime * 1.6);
+                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 1.6);
+                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 1.6);
+                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glide * 1.6);
                 
                 voiceGain.gain.setTargetAtTime(key === '!' ? 0.26 : 0.17, ctx.currentTime, 0.1);
                 
@@ -397,7 +407,7 @@ export const ValsangEngine = (() => {
                 let step = Math.max(1, Math.floor(sentenceBuffer.length / maxPoints));
                 let phrasePoints = sentenceBuffer.filter((_, i) => i % step === 0).slice(-maxPoints);
                 
-                if (key === '?') phrasePoints.push({deg: currentDegree});
+                if (key === '?') phrasePoints.push({deg: currentDegree + 2});
                 else if (key === '!') { phrasePoints.push(sentenceBuffer[sentenceBuffer.length-1] || {deg: currentDegree}); phrasePoints.push({deg: currentDegree}); }
                 else phrasePoints.push({deg: currentDegree});
                 
@@ -409,11 +419,12 @@ export const ValsangEngine = (() => {
                 sentenceBuffer = [];
                 prevAlphaIdx = null;
             } else {
-                currentDegree = clamp(currentDegree - 1, 0, 12);
+                degreeFloat -= 1;
+                currentDegree = Math.round(degreeFloat);
                 const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
-                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 1.3);
-                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 1.3);
-                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glideTime * 1.3);
+                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 1.3);
+                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 1.3);
+                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glide * 1.3);
                 voiceGain.gain.setTargetAtTime(0.10, ctx.currentTime, 0.1);
             }
             
@@ -445,55 +456,56 @@ export const ValsangEngine = (() => {
             osc.stop(ctx.currentTime + 0.12);
             
         } else if (ALPHABET.includes(lowKey)) {
+            const ix = ALPHABET.indexOf(lowKey);
             const isVowel = ['a','o','u','å','e','i','y','ä','ö'].includes(lowKey);
             
-            // Smart harmonization: smooth pentatonic walk biased toward current harmony
-            const targetBase = 5 + currentChordDegree; // Focus around middle octave + chord offset
-            
-            let jump = 0;
-            if (currentDegree > targetBase + 2) jump = -1;
-            else if (currentDegree < targetBase - 2) jump = 1;
-            else {
-                // If in zone, small smooth steps
-                if (Math.random() > 0.4) jump = (Math.random() > 0.5 ? 1 : -1);
+            // 9.3 Melodisteg deterministiskt
+            let steps = 0;
+            if (prevAlphaIdx !== null) {
+                const diff = ix - prevAlphaIdx;
+                steps = clamp(Math.round(diff / 5), -3, 3);
+                if (steps === 0 && diff !== 0) {
+                    steps = diff > 0 ? 1 : -1;
+                }
             }
+            prevAlphaIdx = ix;
             
-            currentDegree = clamp(currentDegree + jump, 0, 15);
+            const effSteps = steps * g;
+            degreeFloat = degreeFloat + effSteps + 0.08 * (centerDegree - degreeFloat);
+            degreeFloat = clamp(degreeFloat, 0, 15);
+            currentDegree = Math.round(degreeFloat);
             
             const targetFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
             
-            const glideTime = isVowel ? 0.6 : 0.3;
-            const releaseTC = isVowel ? 1.5 : 0.8;
-            const isCapital = (key !== lowKey);
-            
+            const transientGainScale = (0.5 + 0.5 * g);
             let traceType = isVowel ? 'vowel' : 'cons';
             
             if (isVowel) {
-                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime);
-                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime);
-                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glideTime);
+                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide);
+                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide);
+                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glide);
                 voiceGain.gain.setTargetAtTime(0.20, ctx.currentTime, 0.05);
                 voiceGain.gain.setTargetAtTime(0.05, ctx.currentTime + 0.1, releaseTC);
             } else {
-                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 0.6);
-                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glideTime * 0.6);
-                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glideTime * 0.6);
+                voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 0.6);
+                voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide * 0.6);
+                subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glide * 0.6);
                 voiceGain.gain.setTargetAtTime(0.13, ctx.currentTime, 0.03);
                 voiceGain.gain.setTargetAtTime(0.05, ctx.currentTime + 0.05, releaseTC * 0.8);
                 
                 if ('ptkbdg'.includes(lowKey)) {
-                    playTransient('noise', 1100 + 45 * idx, 7, 0.08, 0.05, 'both');
+                    playTransient('noise', 1100 + 45 * ix, 7, 0.08 * transientGainScale, 0.05, 'both');
                 } else if ('sfvzchj'.includes(lowKey)) {
                     const dur = clamp(dtEma * 0.5, 120, 500) / 1000;
-                    playTransient('noise', targetFreq * 4, 1.6, 0.1, dur, 'wet');
+                    playTransient('noise', targetFreq * 4, 1.6, 0.1 * transientGainScale, dur, 'wet');
                 } else if ('mnlr'.includes(lowKey)) {
-                    playTransient('sine', targetFreq / 2, 1, 0.09, 0.16, 'both');
+                    playTransient('sine', targetFreq / 2, 1, 0.09 * transientGainScale, 0.16, 'both');
                 }
             }
             
             if (isCapital) {
                 const octQuintFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi) + 19);
-                playTransient('sine', octQuintFreq, 1, 0.05, 1.2, 'wet');
+                playTransient('sine', octQuintFreq, 1, 0.05 * transientGainScale, 1.2, 'wet');
             }
             
             sentenceBuffer.push({deg: currentDegree});
@@ -507,7 +519,8 @@ export const ValsangEngine = (() => {
         handleKey,
         setVolume,
         setDepth,
-        getState,
-        onTrace: (cb) => { onTraceCallback = cb; }
+        mute: (m) => setVolume(m ? 0 : 0.6), // Standardvolym 0.6, justeras av slider
+        onTrace: (cb) => { onTraceCallback = cb; },
+        getState
     };
 })();

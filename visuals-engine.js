@@ -98,7 +98,12 @@ export const VisualsEngine = (() => {
         // Vindsus-läget tvingar bort havstemat
         if (config.vindsusMode) {
             config.djupvattenEnabled = false;
-            config.sonogramEnabled = false;
+            if (config.sonogramEnabled) {
+                config.sonogramEnabled = false;
+                if (sonogramCanvas && sonoCtx) {
+                    sonoCtx.clearRect(0, 0, sonogramCanvas.width, sonogramCanvas.height);
+                }
+            }
         }
         
         if (!config.djupvattenEnabled) {

@@ -531,7 +531,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 24px 28px;
-            width: 540px;
+            width: 680px;
             max-width: 95vw;
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             animation: slideUp 0.2s ease;
@@ -1786,6 +1786,7 @@
 
 <body>
     <!-- VALSÅNG ENGINE & VINDSUS ENGINE -->
+    <script src="text-context.js"></script>
     <script src="valsang-engine.js"></script>
     <script src="vindsus-engine.js"></script>
     
@@ -3102,6 +3103,15 @@
             } else {
                 overlay.classList.remove('bg-image');
             }
+            
+            // Override with vindsus-bg if vindsus is active
+            if (typewriterSoundProfile === 'vindsus') {
+                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('vindsus-bg.jpg') no-repeat center center";
+                overlay.style.backgroundSize = 'cover';
+            } else {
+                overlay.style.background = '';
+            }
+            
             document.getElementById('settZenBg').value = settings.fsBgType || 'gradient';
 
             highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
@@ -3171,13 +3181,7 @@
                 }
             }
             
-            // Hantera visuell Vindsus-nattbakgrund (Skogsglänta i sommarnatt)
-            if (typewriterSoundProfile === 'vindsus') {
-                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
-                overlay.style.backgroundSize = 'cover';
-            } else if (settings.bgType === 'image') {
-                overlay.style.background = ""; // Återställ
-            }
+            // Hantera visuell Vindsus-nattbakgrund redan applicerad i Zen background steget
             
             // Initiera VisualsEngine
             if (window.VisualsEngine && window.ValsangEngine) {
@@ -4279,6 +4283,11 @@
             });
             if (!document.querySelector('#highlightSwatches .color-swatch.active') && swatches.length) {
                 swatches[0].classList.add('active');
+            }
+
+            // Attach TextContext for v4
+            if (window.TextContext) {
+                window.TextContext.attach(document.getElementById('editorTextarea'));
             }
 
             // Resume timer if running
