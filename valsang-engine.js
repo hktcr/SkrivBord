@@ -333,7 +333,8 @@ export const ValsangEngine = (() => {
         
         wakeUp();
 
-        const key = e.key;
+        const key = e.key || "";
+        if (!key) return;
         const lowKey = key.toLowerCase();
         charsSinceStart++;
 

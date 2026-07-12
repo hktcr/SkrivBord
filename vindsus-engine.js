@@ -120,7 +120,7 @@ const VindsusEngine = (function() {
     }
 
     function handleKey(key) {
-        if (!isInitialized) return;
+        if (!isInitialized || !key) return;
         
         // On keypress, trigger a "gust" of wind by briefly raising the filter frequencies
         // and increasing the main gain slightly.
