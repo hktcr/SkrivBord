@@ -40,6 +40,7 @@ export const ValsangEngine = (() => {
     let idleLFO = null;
     let idleGain = null;
     let idleTimer = null;
+    let isIdle = true;
     
     let onTraceCallback = null;
 
