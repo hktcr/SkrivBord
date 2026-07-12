@@ -206,8 +206,12 @@ export const VisualsEngine = (() => {
                 overage = Math.min(1, Math.max(0, over / 50.0));
             }
             
-            const opacity = 0.25 + (0.97 - 0.25) * overage;
-            mareldVeil.style.opacity = opacity.toFixed(2);
+            if (config.vindsusMode) {
+                mareldVeil.style.opacity = '0';
+            } else {
+                const opacity = 0.25 + (0.97 - 0.25) * overage;
+                mareldVeil.style.opacity = opacity.toFixed(2);
+            }
         } else {
             mareldVeil.style.opacity = '0';
         }
