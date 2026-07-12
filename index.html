@@ -531,8 +531,8 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 24px 28px;
-            width: 440px;
-            max-width: 90vw;
+            width: 540px;
+            max-width: 95vw;
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             animation: slideUp 0.2s ease;
         }
@@ -1938,6 +1938,7 @@
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + O</td><td>Importera fil</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + S</td><td>Tvinga Spara</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + ⇧ + C</td><td>Kopiera all text</td></tr>
+                <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + ⇧ + M</td><td>Ändra tids/teckenmål</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + P</td><td>Skriv ut / PDF</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + ↵</td><td>Fokusläge (Av/På)</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">Esc</td><td>Stäng dialoger / Fokus</td></tr>
@@ -2012,7 +2013,7 @@
 
             <div class="setting-row" id="soundProfileRow" style="display: none;">
                 <label>Ljudprofil</label>
-                <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: auto; max-width: 220px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+                <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: auto; max-width: 300px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
                     <option value="digital">Digital (Lätt)</option>
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
@@ -2990,9 +2991,18 @@
                 exportPdf();
             }
 
-            if (isCmd && e.shiftKey && e.key === 'C') {
+            if (isCmd && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
                 e.preventDefault();
                 copyMarkdown();
+            }
+
+            if (isCmd && e.shiftKey && (e.key === 'M' || e.key === 'm')) {
+                e.preventDefault();
+                toggleTimerPop({ target: document.getElementById('timerWidget') });
+                setTimeout(() => {
+                    const el = document.getElementById('goalTarget');
+                    if(el) { el.focus(); el.select(); }
+                }, 100);
             }
 
             // Switch tabs with Cmd+1-9
