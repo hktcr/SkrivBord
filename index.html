@@ -531,7 +531,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 24px 28px;
-            width: 680px;
+            width: 820px;
             max-width: 95vw;
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
             animation: slideUp 0.2s ease;
@@ -2019,7 +2019,8 @@
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
                     <option value="valsang">Valsång (Kontinuerlig)</option>
-                    <option value="vindsus">Vindsus (Kontinuerlig)</option>
+                    <option value="vindsus">Vindsus (Fokus: Eteriskt sus)</option>
+                    <option value="skogsklang">Skogsklang (Harmoniskt & Eldflugor)</option>
                 </select>
                 <div class="setting-desc">OBS: Gäller endast i fullskärmsläge.</div>
             </div>
@@ -2043,10 +2044,20 @@
                         <label>Sonogram (Fokusläge)</label>
                         <div class="setting-toggle"><div class="toggle-track" id="settSonogram" onclick="toggleSonogram()"></div></div>
                     </div>
+                    <div class="setting-row" style="margin-bottom:0;">
+                        <label>Mareld/Målanimation (Fokusläge)</label>
+                        <div class="setting-toggle"><div class="toggle-track" id="settMareld" onclick="toggleMareld()"></div></div>
+                    </div>
                 </div>
-                <div class="setting-row" style="margin-bottom:0;">
-                    <label>Mareld/Målanimation (Fokusläge)</label>
-                    <div class="setting-toggle"><div class="toggle-track" id="settMareld" onclick="toggleMareld()"></div></div>
+                <div id="skogsklangSettings" style="display: none;">
+                    <div class="setting-row" style="margin-bottom:0;">
+                        <label>Eldflugor</label>
+                        <select id="settFireflyMode" onchange="updateValsangSettings()" style="width: auto; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+                            <option value="sentence">Meningar (En fluga per mening)</option>
+                            <option value="goal">Mål (Kopplad till timer/mål)</option>
+                            <option value="off">Av</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -2168,8 +2179,10 @@
     <script src="./vindsus-engine.js"></script>
     <script type="module">
         import { ValsangEngine } from './valsang-engine.js';
+        import { SkogsklangEngine } from './skogsklang-engine.js';
         import { VisualsEngine } from './visuals-engine.js';
         window.ValsangEngine = ValsangEngine;
+        window.SkogsklangEngine = SkogsklangEngine;
         window.VisualsEngine = VisualsEngine;
     </script>
     <script>
@@ -3104,9 +3117,9 @@
                 overlay.classList.remove('bg-image');
             }
             
-            // Override with vindsus-bg if vindsus is active
-            if (typewriterSoundProfile === 'vindsus') {
-                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('vindsus-bg.jpg') no-repeat center center";
+            // Override with forest-bg if vindsus or skogsklang is active
+            if (typewriterSoundProfile === 'vindsus' || typewriterSoundProfile === 'skogsklang') {
+                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
                 overlay.style.backgroundSize = 'cover';
             } else {
                 overlay.style.background = '';
@@ -3166,8 +3179,9 @@
             buildOutline();
             startZenTimer();
 
-            // Initiera Valsång/Vindsus om det är valt
-            if ((typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'vindsus') && typewriterSoundEnabled) {
+            // Initiera Valsång/Vindsus/Skogsklang om det är valt
+            const isContinuousProfile = ['valsang', 'vindsus', 'skogsklang'].includes(typewriterSoundProfile);
+            if (isContinuousProfile && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 if (typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
@@ -3179,12 +3193,14 @@
                     window.VindsusEngine.init(audioCtx, audioCtx.destination);
                     window.VindsusEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                 }
+                if (typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
+                    window.SkogsklangEngine.init(audioCtx);
+                    window.SkogsklangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                }
             }
             
-            // Hantera visuell Vindsus-nattbakgrund redan applicerad i Zen background steget
-            
             // Initiera VisualsEngine
-            if (window.VisualsEngine && window.ValsangEngine) {
+            if (window.VisualsEngine) {
                 const domElements = {
                     sonogramCanvas: document.getElementById('sonogramCanvas'),
                     mareldCanvas: document.getElementById('mareldCanvas'),
@@ -3192,18 +3208,27 @@
                     djupvattenContainer: document.getElementById('djupvattenContainer'),
                     djupvattenLayers: Array.from(document.querySelectorAll('.dj-layer'))
                 };
-                window.VisualsEngine.init(domElements, () => window.ValsangEngine.getState());
+                
+                let stateProvider = () => ({});
+                if (typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
+                    stateProvider = () => window.ValsangEngine.getState();
+                } else if (typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
+                    stateProvider = () => window.SkogsklangEngine.getState();
+                }
+
+                window.VisualsEngine.init(domElements, stateProvider);
                 window.VisualsEngine.setConfig({
                     sonogramEnabled: settings.valsangSonogram !== false,
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
-                    vindsusMode: (typewriterSoundProfile === 'vindsus'),
+                    vindsusMode: (typewriterSoundProfile === 'vindsus' || typewriterSoundProfile === 'skogsklang'),
+                    fireflyMode: settings.fireflyMode || 'sentence',
                     goalProgress: window._currentGoalProgress || 0,
                     theme: 'dark'
                 });
                 
-                // Bara kör om Valsång eller Vindsus är valt
-                if ((typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'vindsus') && typewriterSoundEnabled) {
+                // Bara kör om Valsång, Vindsus eller Skogsklang är valt
+                if (isContinuousProfile && typewriterSoundEnabled) {
                     window.VisualsEngine.start();
                 }
             }
@@ -3754,21 +3779,42 @@
             saveSettings(settings);
             applySettings(settings);
             
-            const isContinuous = ['valsang', 'vindsus'].includes(settings.typewriterSoundProfile);
+            const isContinuous = ['valsang', 'vindsus', 'skogsklang'].includes(settings.typewriterSoundProfile);
             document.getElementById('valsangSettings').style.display = isContinuous ? 'flex' : 'none';
             document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
+            document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang' || settings.typewriterSoundProfile === 'vindsus') ? 'block' : 'none';
             
             if (window.ValsangEngine) window.ValsangEngine.destroy();
             if (window.VindsusEngine) window.VindsusEngine.destroy();
+            if (window.SkogsklangEngine) window.SkogsklangEngine.destroy();
             
             if (isContinuous && settings.typewriterSound && isFullscreen) {
                 if (settings.typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
                     window.ValsangEngine.init(audioCtx);
                 } else if (settings.typewriterSoundProfile === 'vindsus' && window.VindsusEngine) {
                     window.VindsusEngine.init(audioCtx, audioCtx.destination);
+                } else if (settings.typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
+                    window.SkogsklangEngine.init(audioCtx);
+                    window.SkogsklangEngine.onSentence((info) => {
+                        if (window.VisualsEngine && settings.fireflyMode === 'sentence') {
+                            window.VisualsEngine.spawnSentenceFirefly(info.length);
+                        }
+                    });
                 }
+                
                 if (window.VisualsEngine) {
-                    window.VisualsEngine.setConfig({ vindsusMode: (settings.typewriterSoundProfile === 'vindsus') });
+                    window.VisualsEngine.setConfig({ 
+                        vindsusMode: (settings.typewriterSoundProfile === 'vindsus' || settings.typewriterSoundProfile === 'skogsklang'),
+                        fireflyMode: settings.fireflyMode || 'sentence'
+                    });
+                    
+                    let stateProvider = () => ({});
+                    if (settings.typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
+                        stateProvider = () => window.ValsangEngine.getState();
+                    } else if (settings.typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
+                        stateProvider = () => window.SkogsklangEngine.getState();
+                    }
+                    window.VisualsEngine.setStateProvider(stateProvider);
                     window.VisualsEngine.start();
                 }
             } else {
@@ -3778,8 +3824,8 @@
             // Uppdatera bakgrund direkt om vi är i fullscreen
             if (isFullscreen) {
                 const overlay = document.getElementById('fullscreenOverlay');
-                if (settings.typewriterSoundProfile === 'vindsus') {
-                    overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('vindsus-bg.jpg') no-repeat center center";
+                if (settings.typewriterSoundProfile === 'vindsus' || settings.typewriterSoundProfile === 'skogsklang') {
+                    overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('forest-bg.jpg') no-repeat center center";
                     overlay.style.backgroundSize = 'cover';
                 } else {
                     overlay.style.background = ""; 
@@ -3791,6 +3837,12 @@
             const settings = loadSettings();
             settings.valsangVol = parseFloat(document.getElementById('settValsangVol').value);
             settings.valsangDepth = parseFloat(document.getElementById('settValsangDepth').value);
+            
+            const fireflySelect = document.getElementById('settFireflyMode');
+            if (fireflySelect) {
+                settings.fireflyMode = fireflySelect.value;
+            }
+            
             saveSettings(settings);
             
             if (window.ValsangEngine) {
@@ -3799,6 +3851,13 @@
             }
             if (window.VindsusEngine) {
                 window.VindsusEngine.setVolume(settings.valsangVol);
+            }
+            if (window.SkogsklangEngine) {
+                window.SkogsklangEngine.setVolume(settings.valsangVol);
+                window.SkogsklangEngine.setDepth(settings.valsangDepth);
+            }
+            if (window.VisualsEngine) {
+                window.VisualsEngine.setConfig({ fireflyMode: settings.fireflyMode || 'sentence' });
             }
         }
         
@@ -4265,9 +4324,18 @@
                 document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
             }
             
-            if (settings.typewriterSoundProfile === 'valsang') {
+            const isContinuousProfile = ['valsang', 'vindsus', 'skogsklang'].includes(settings.typewriterSoundProfile);
+            if (isContinuousProfile) {
                 document.getElementById('valsangSettings').style.display = 'flex';
+                document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
+                document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang' || settings.typewriterSoundProfile === 'vindsus') ? 'block' : 'none';
             }
+            
+            if (settings.fireflyMode) {
+                const fireflySelect = document.getElementById('settFireflyMode');
+                if (fireflySelect) fireflySelect.value = settings.fireflyMode;
+            }
+
             document.getElementById('settValsangVol').value = settings.valsangVol !== undefined ? settings.valsangVol : 0.6;
             document.getElementById('settValsangDepth').value = settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0;
             if (settings.valsangDjupvatten !== false) document.getElementById('settDjupvatten').classList.add('active');

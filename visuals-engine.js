@@ -20,6 +20,7 @@ export const VisualsEngine = (() => {
         mareldStartTime: 0,
         mareldStartChars: 0,
         vindsusMode: false,
+        fireflyMode: 'sentence', // 'sentence', 'goal', 'off'
         goalProgress: 0,
         prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
@@ -259,6 +260,7 @@ export const VisualsEngine = (() => {
         
         const s = sparks[emptyIdx];
         s.active = true;
+        s.type = 'ambient';
         s.x = Math.random() * window.innerWidth;
         s.y = Math.random() * window.innerHeight;
         s.vx = (Math.random() * 20 + 5) * (Math.random() > 0.5 ? 1 : -1);
@@ -266,6 +268,58 @@ export const VisualsEngine = (() => {
         s.maxLife = Math.random() * 6 + 4;
         s.life = s.maxLife;
     }
+
+    function spawnSentenceFirefly(length) {
+        if (!config.vindsusMode || config.fireflyMode !== 'sentence') return;
+        
+        // Mappning enligt spec
+        const norm = clamp((length - 15) / (150 - 15), 0, 1);
+        
+        // Find empty slot or oldest
+        let targetIdx = sparks.findIndex(s => !s.active);
+        if (targetIdx === -1) {
+            // Find oldest
+            let oldestLife = Infinity;
+            for (let i = 0; i < sparks.length; i++) {
+                if (sparks[i].life < oldestLife) {
+                    oldestLife = sparks[i].life;
+                    targetIdx = i;
+                }
+            }
+        }
+        
+        const s = sparks[targetIdx];
+        s.active = true;
+        s.type = 'sentence';
+        s.norm = norm;
+        s.x = Math.random() * window.innerWidth;
+        
+        const spawnYCenter = lerp(0.15, 0.75, norm) * window.innerHeight;
+        s.y = spawnYCenter + (Math.random() * 0.2 - 0.1) * window.innerHeight;
+        
+        s.vx = (Math.random() * 20 + 5) * (Math.random() > 0.5 ? 1 : -1);
+        s.vy = -Math.random() * 10 - 2; // Drift
+        
+        // Sinus-parametrar för drift
+        s.driftPhaseX = Math.random() * Math.PI * 2;
+        s.driftPhaseY = Math.random() * Math.PI * 2;
+        s.driftFreqX = 1 / (6 + Math.random() * 8); // 6-14s period
+        s.driftFreqY = 1 / (6 + Math.random() * 8);
+        
+        // Blinkparametrar
+        s.blinkPhase = 0;
+        s.blinkState = 'attack'; // attack, sustain, release, dark
+        s.blinkTimer = 0;
+        s.darkDuration = 1.5 + Math.random() * 2.5; // 1.5-4s
+        
+        s.maxLife = Infinity; // Lever tills den tvingas bort (fast pool)
+        s.life = 1000; // Högt värde
+        
+        startLoop();
+    }
+    
+    function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     function updateDjupvatten() {
         if (!config.djupvattenEnabled || config.prefersReducedMotion || !getValsangState) return;
@@ -342,8 +396,8 @@ export const VisualsEngine = (() => {
             let activeSparks = 0;
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
-            // Ambient spawn for Eldflugor based on goal progress
-            if (config.vindsusMode && config.goalProgress > 0) {
+            // Ambient spawn for Eldflugor based on goal progress (if goal mode)
+            if (config.vindsusMode && config.goalProgress > 0 && config.fireflyMode === 'goal') {
                 const targetAmbient = Math.floor(config.goalProgress * 60); // Up to 60 fireflies at 100%
                 let currentAmbient = sparks.filter(s => s.active).length;
                 if (currentAmbient < targetAmbient && Math.random() < 0.05) {
@@ -354,34 +408,91 @@ export const VisualsEngine = (() => {
             for (let i = 0; i < sparks.length; i++) {
                 const s = sparks[i];
                 if (s.active) {
-                    s.x += s.vx * dt;
-                    s.y += s.vy * dt;
-                    
-                    if (config.vindsusMode) {
-                        s.x += Math.sin(time/1000 + i) * 0.5; // Flutter
-                        s.y += Math.cos(time/1200 + i) * 0.3;
+                    let drawAlpha = 0;
+                    let radius = 2;
+                    let fillStyle = '';
+
+                    if (s.type === 'sentence') {
+                        // Menings-eldfluga logic
+                        const fart = lerp(8, 26, s.norm);
+                        const dtSec = dt; // dt is in seconds already? Yes, (time - lastTime)/1000
+                        
+                        s.x += s.vx * dt + Math.sin(time/1000 * Math.PI * 2 * s.driftFreqX + s.driftPhaseX) * fart * dt;
+                        s.y += s.vy * dt + Math.cos(time/1000 * Math.PI * 2 * s.driftFreqY + s.driftPhaseY) * (fart * 0.5) * dt;
+                        
+                        // Edge wrapping
+                        if (s.x < -20) s.x = mareldCanvas.width + 20;
+                        if (s.x > mareldCanvas.width + 20) s.x = -20;
+                        if (s.y < -20) s.y = mareldCanvas.height + 20;
+                        if (s.y > mareldCanvas.height + 20) s.y = -20;
+                        
+                        if (config.prefersReducedMotion) {
+                            drawAlpha = 0.5;
+                        } else {
+                            s.blinkTimer += dtSec;
+                            if (s.blinkState === 'attack') {
+                                drawAlpha = s.blinkTimer / 0.25;
+                                if (s.blinkTimer >= 0.25) { s.blinkState = 'sustain'; s.blinkTimer = 0; }
+                            } else if (s.blinkState === 'sustain') {
+                                drawAlpha = 1.0;
+                                if (s.blinkTimer >= 0.6) { s.blinkState = 'release'; s.blinkTimer = 0; }
+                            } else if (s.blinkState === 'release') {
+                                drawAlpha = 1.0 - (s.blinkTimer / 0.6);
+                                if (s.blinkTimer >= 0.6) { s.blinkState = 'dark'; s.blinkTimer = 0; }
+                            } else if (s.blinkState === 'dark') {
+                                drawAlpha = 0.06; // faint
+                                if (s.blinkTimer >= s.darkDuration) {
+                                    s.blinkState = 'attack'; s.blinkTimer = 0;
+                                    s.darkDuration = 1.5 + Math.random() * 2.5;
+                                }
+                            }
+                        }
+                        
+                        const maxGlod = lerp(0.30, 0.95, s.norm);
+                        drawAlpha = Math.max(0.06 * s.norm, drawAlpha * maxGlod);
+                        radius = lerp(1.2, 4.2, s.norm);
+                        
+                        // Kärna varmgul #ffe9a0, ytterglöd gulgrön #c8ff78
+                        const grad = mareldCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, radius * 2);
+                        grad.addColorStop(0, `rgba(255, 233, 160, ${drawAlpha})`);
+                        grad.addColorStop(1, `rgba(200, 255, 120, 0)`);
+                        fillStyle = grad;
+                        radius = radius * 2; // draw size
+                        
+                        s.life -= dt;
+                        
+                    } else {
+                        // Old Mareld/Goal spark
+                        s.x += s.vx * dt;
+                        s.y += s.vy * dt;
+                        
+                        if (config.vindsusMode) {
+                            s.x += Math.sin(time/1000 + i) * 0.5;
+                            s.y += Math.cos(time/1200 + i) * 0.3;
+                        }
+                        
+                        s.life -= dt;
+                        if (s.life <= 0) {
+                            s.active = false;
+                            continue;
+                        }
+                        
+                        const alpha = s.life / s.maxLife;
+                        if (config.vindsusMode) {
+                            const pulse = Math.abs(Math.sin((s.maxLife - s.life) * 3));
+                            radius = 1 + pulse * 2.5;
+                            fillStyle = `rgba(200, 255, 120, ${alpha.toFixed(2)})`;
+                        } else {
+                            radius = 2 + (1 - alpha) * 2;
+                            fillStyle = `rgba(124, 247, 212, ${alpha.toFixed(2)})`;
+                        }
                     }
                     
-                    s.life -= dt;
-                    if (s.life <= 0) {
-                        s.active = false;
-                    } else {
+                    if (s.active) {
                         activeSparks++;
-                        const alpha = s.life / s.maxLife;
-                        
                         mareldCtx.beginPath();
-                        if (config.vindsusMode) {
-                            // Eldflugor (Fireflies)
-                            const pulse = Math.abs(Math.sin((s.maxLife - s.life) * 3));
-                            const radius = 1 + pulse * 2.5;
-                            mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-                            mareldCtx.fillStyle = `rgba(200, 255, 120, ${alpha.toFixed(2)})`; // Yellowish green
-                        } else {
-                            // Mareld (Sea sparkle)
-                            const radius = 2 + (1 - alpha) * 2;
-                            mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-                            mareldCtx.fillStyle = `rgba(124, 247, 212, ${alpha.toFixed(2)})`; // Cyan
-                        }
+                        mareldCtx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+                        mareldCtx.fillStyle = fillStyle;
                         mareldCtx.fill();
                     }
                 }
@@ -451,12 +562,30 @@ export const VisualsEngine = (() => {
         }
     }
 
+    function stop() {
+        // Function to explicitly stop visuals if settings disabled
+        stopLoop();
+    }
+    
+    // Add start explicitly for outside access
+    function start() {
+        startLoop();
+    }
+    
+    function setStateProvider(provider) {
+        getValsangState = provider;
+    }
+
     return {
         init,
         setConfig,
         setGoal,
         addTrace,
         handleKey,
-        triggerDive
+        triggerDive,
+        spawnSentenceFirefly,
+        stop,
+        start,
+        setStateProvider
     };
 })();
