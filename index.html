@@ -3332,7 +3332,7 @@
         document.getElementById('fsTextarea').addEventListener('beforeinput', (ev) => {
             if (!typewriterSoundEnabled) return;
             ensureAudio();
-            const profile = settings.typewriterSoundProfile || typewriterSoundProfile;
+            const profile = (typeof settings !== 'undefined' ? settings : loadSettings()).typewriterSoundProfile || typewriterSoundProfile;
             let engine = null;
             if (profile === 'valsang') engine = window.ValsangEngine;
             else if (profile === 'skogsklang') engine = window.SkogsklangEngine;

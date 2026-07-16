@@ -45,6 +45,10 @@ export const SkogsklangEngine = (() => {
     
     let charCounter = 0;
     let currentWordChars = 0;
+    let wordStartIx = null;
+    let sentenceChars = 0;
+    let sentenceLetters = 0;
+
     
     // Helper functions
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
@@ -309,7 +313,6 @@ export const SkogsklangEngine = (() => {
             rootMidi = newRootMidi; 
         }
 
-        const key = e.key || "";
         if (!key) return;
         const lowKey = key.toLowerCase();
 
