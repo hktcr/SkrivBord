@@ -3191,10 +3191,15 @@
                     window.ValsangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                     window.ValsangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
                 }
-                }
                 if (typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
                     window.SkogsklangEngine.init(audioCtx);
                     window.SkogsklangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                    window.SkogsklangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
+                    window.SkogsklangEngine.onSentence(info => {
+                        if (window.VisualsEngine && settings.fireflyMode === 'sentence') {
+                            window.VisualsEngine.spawnSentenceFirefly(info.length);
+                        }
+                    });
                 }
             }
             
@@ -3239,6 +3244,7 @@
         }
 
         function closeFocusMode() {
+            if (window.TextContext) window.TextContext.attach(document.getElementById('editorTextarea'));
             isFullscreen = false;
             const overlay = document.getElementById('fullscreenOverlay');
             const fsTa = document.getElementById('fsTextarea');
@@ -3259,6 +3265,8 @@
             if (window.ValsangEngine) {
                 window.ValsangEngine.destroy();
             }
+            if (window.SkogsklangEngine) {
+                window.SkogsklangEngine.destroy();
             }
             if (window.VisualsEngine) {
                 window.VisualsEngine.stop();
@@ -3312,6 +3320,34 @@
         }
         document.getElementById('fsTextarea').addEventListener('click', () => setTimeout(checkCursorMove, 0));
         document.getElementById('fsTextarea').addEventListener('keyup', checkCursorMove);
+        
+        function ensureAudio() {
+            if (!audioCtx || audioCtx.state === 'closed') {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+        document.addEventListener('pointerdown', ensureAudio, { passive: true, capture: true });
+
+        document.getElementById('fsTextarea').addEventListener('beforeinput', (ev) => {
+            if (!typewriterSoundEnabled) return;
+            ensureAudio();
+            const profile = settings.typewriterSoundProfile || typewriterSoundProfile;
+            let engine = null;
+            if (profile === 'valsang') engine = window.ValsangEngine;
+            else if (profile === 'skogsklang') engine = window.SkogsklangEngine;
+            if (!engine) return;
+            
+            const t = ev.inputType;
+            if (t === 'insertText' && ev.data) {
+                for (const ch of ev.data) engine.handleChar(ch);
+            } else if (t === 'insertLineBreak' || t === 'insertParagraph') {
+                engine.handleChar('\n');
+            } else if (t.startsWith('deleteContent')) {
+                engine.handleChar('\b');
+            }
+        });
+
         document.getElementById('fsTextarea').addEventListener('keydown', (e) => {
             setTimeout(checkCursorMove, 0);
 
@@ -3320,14 +3356,9 @@
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
-                if (typewriterSoundProfile === 'valsang') {
-                    if (window.ValsangEngine) window.ValsangEngine.handleKey(e);
-                    return; // Hoppa över vanliga ljud
+                if (typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'skogsklang') {
+                    return; // Hanteras av beforeinput
                 }
-                
-                    return;
-                }
-                
                 if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                     const isEnter = e.key === 'Enter';
                     const isSpace = e.key === ' ';
@@ -3795,7 +3826,7 @@
                 
                 if (window.VisualsEngine) {
                     window.VisualsEngine.setConfig({ 
-                        skogstemaMode: (settings.settings.typewriterSoundProfile === 'skogsklang'),
+                        skogstemaMode: (settings.typewriterSoundProfile === 'skogsklang'),
                         fireflyMode: settings.fireflyMode || 'sentence'
                     });
                     
@@ -3815,7 +3846,7 @@
             // Uppdatera bakgrund direkt om vi är i fullscreen
             if (isFullscreen) {
                 const overlay = document.getElementById('fullscreenOverlay');
-                if (settings.settings.typewriterSoundProfile === 'skogsklang') {
+                if (settings.typewriterSoundProfile === 'skogsklang') {
                     overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('forest-bg.jpg') no-repeat center center";
                     overlay.style.backgroundSize = 'cover';
                 } else {
@@ -3839,7 +3870,6 @@
             if (window.ValsangEngine) {
                 window.ValsangEngine.setVolume(settings.valsangVol);
                 window.ValsangEngine.setDepth(settings.valsangDepth);
-            }
             }
             if (window.SkogsklangEngine) {
                 window.SkogsklangEngine.setVolume(settings.valsangVol);
