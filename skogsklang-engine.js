@@ -10,6 +10,7 @@ export const SkogsklangEngine = (() => {
     let ctx = null;
     let masterGain, dryGain, wetGain, compressor, convolver;
     let baseOsc, baseOscTri, baseGain;
+    let breathLFO, breathLFOGain;
     let voiceFilter;
     
     // Ackordröster (1 till 5)
@@ -135,6 +136,16 @@ export const SkogsklangEngine = (() => {
         baseOsc.start();
         baseOscTri.start();
         
+        // Andnings-LFO: modulerar basröstenst gain subtilt i takt med skrivtempot
+        breathLFO = ctx.createOscillator();
+        breathLFO.type = 'sine';
+        breathLFO.frequency.value = 0.1; // Mycket långsam initial andning
+        breathLFOGain = ctx.createGain();
+        breathLFOGain.gain.value = 0.008; // ±0.008 runt 0.05 = 0.042-0.058
+        breathLFO.connect(breathLFOGain);
+        breathLFOGain.connect(baseGain.gain); // LFO adderas till baseGain.gain-värdet
+        breathLFO.start();
+        
         // Ackordröster (1-5)
         voices = [];
         for(let i = 0; i < 5; i++) {
@@ -187,6 +198,7 @@ export const SkogsklangEngine = (() => {
         clearTimeout(idleTimer);
         try {
             baseOsc.stop(); baseOscTri.stop();
+            if (breathLFO) breathLFO.stop();
             voices.forEach(v => { v.sin.stop(); v.tri.stop(); });
             if (idleLFO) idleLFO.stop();
         } catch(e) {}
@@ -235,12 +247,18 @@ export const SkogsklangEngine = (() => {
         if (isIdle) {
             isIdle = false;
             baseGain.gain.setTargetAtTime(0.05, ctx.currentTime, 1.0);
+            // Andningen vaknar: snabbare puls, lite djupare
+            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.15, ctx.currentTime, 1.0);
+            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.008, ctx.currentTime, 0.5);
         }
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
             if (!ctx) return;
             isIdle = true;
             baseGain.gain.setTargetAtTime(0.02, ctx.currentTime, 2.0);
+            // Vila: djup, långsam andning
+            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.06, ctx.currentTime, 3.0);
+            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.012, ctx.currentTime, 2.0);
             voices.forEach(v => {
                 if (v.activeDegree !== null) {
                     v.gain.gain.setTargetAtTime(0, ctx.currentTime, 2.0);
@@ -304,6 +322,12 @@ export const SkogsklangEngine = (() => {
         const g = stats.g;
 
         wakeUp();
+
+        // Andningsrytm följer skrivtempot
+        // Snabb skrivning (tempoNorm ≈ 0) → puls ~0.3 Hz (andas varannan sekund)
+        // Långsam skrivning (tempoNorm ≈ 1) → puls ~0.1 Hz (en andning var 10:e sekund)
+        const breathRate = lerp(0.30, 0.10, tempoNorm);
+        if (breathLFO) breathLFO.frequency.setTargetAtTime(breathRate, ctx.currentTime, 2.0);
 
         // 3.3 Tonart och skalfärg
         if (stats.vowelRatio > 0.42 && !isDurScale) isDurScale = true;
