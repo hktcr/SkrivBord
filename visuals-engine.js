@@ -272,13 +272,13 @@ export const VisualsEngine = (() => {
     function spawnSentenceFirefly(length) {
         if (!config.skogstemaMode || (config.fireflyMode && config.fireflyMode !== 'sentence')) return;
         
-        // Mappning enligt spec
+        // Mappning enligt spec: kort mening = avlägsen, lång = nära
         const norm = clamp((length - 15) / (150 - 15), 0, 1);
         
-        // Find empty slot or oldest
+        // Hitta tom plats eller äldsta (pool = 60 st, se spec 2.5)
         let targetIdx = sparks.findIndex(s => !s.active);
         if (targetIdx === -1) {
-            // Find oldest
+            // Äldsta: tonar ut över 4s (spec 2.5)
             let oldestLife = Infinity;
             for (let i = 0; i < sparks.length; i++) {
                 if (sparks[i].life < oldestLife) {
@@ -286,34 +286,49 @@ export const VisualsEngine = (() => {
                     targetIdx = i;
                 }
             }
+            // Markera fadout på den gamla
+            if (sparks[targetIdx]) sparks[targetIdx].fadeOut = 4.0;
         }
         
         const s = sparks[targetIdx];
         s.active = true;
         s.type = 'sentence';
         s.norm = norm;
+        s.fadeOut = 0; // Inte under uttoning
         s.x = Math.random() * window.innerWidth;
         
+        // Avlägsna högt uppe (trädkronor), nära längre ner (spec 2.3)
         const spawnYCenter = lerp(0.15, 0.75, norm) * window.innerHeight;
         s.y = spawnYCenter + (Math.random() * 0.2 - 0.1) * window.innerHeight;
         
-        s.vx = (Math.random() * 20 + 5) * (Math.random() > 0.5 ? 1 : -1);
-        s.vy = -Math.random() * 10 - 2; // Drift
+        // Biologiskt trovärdigt: Photinus pyralis flyger 0.1-0.5 m/s
+        // Skala: norm=0 (avlägsen) långsam, norm=1 (nära) snabbare (parallax)
+        const baseSpeed = lerp(4, 14, norm); // px/s
+        const angle = Math.random() * Math.PI * 2;
+        s.vx = Math.cos(angle) * baseSpeed;
+        s.vy = Math.sin(angle) * baseSpeed;
         
-        // Sinus-parametrar för drift
+        // Två sinusvandringsar med individuella faser och perioder (spec 2.4)
+        // Ger mjuka, oregelbundna J-formade kurvor som riktiga eldflugor
         s.driftPhaseX = Math.random() * Math.PI * 2;
         s.driftPhaseY = Math.random() * Math.PI * 2;
-        s.driftFreqX = 1 / (6 + Math.random() * 8); // 6-14s period
-        s.driftFreqY = 1 / (6 + Math.random() * 8);
+        s.driftPeriodX = 6 + Math.random() * 8; // 6-14s (spec 2.4)
+        s.driftPeriodY = 6 + Math.random() * 8;
+        s.driftFreqX = 1 / s.driftPeriodX;
+        s.driftFreqY = 1 / s.driftPeriodY;
+        // Svag slumpvandring (random walk) för oregelbundenhet
+        s.wanderAngle = Math.random() * Math.PI * 2;
         
-        // Blinkparametrar
-        s.blinkPhase = 0;
-        s.blinkState = 'attack'; // attack, sustain, release, dark
+        // Bioluminescens-blinkning (Photinus-mönster, spec 2.4)
+        // attack 0.25s, platå 0.4-0.8s, release 0.6s, mörk 1.5-4s
+        s.blinkState = 'attack';
         s.blinkTimer = 0;
-        s.darkDuration = 1.5 + Math.random() * 2.5; // 1.5-4s
+        s.sustainDuration = 0.4 + Math.random() * 0.4; // 0.4-0.8s platå
+        s.darkDuration = 1.5 + Math.random() * 2.5;    // 1.5-4s mörk
         
-        s.maxLife = Infinity; // Lever tills den tvingas bort (fast pool)
-        s.life = 1000; // Högt värde
+        s.maxLife = Infinity; // Lever tills poolen tvingar bort den
+        s.life = 1000;
+        s.born = performance.now();
         
         startLoop();
     }
@@ -413,51 +428,77 @@ export const VisualsEngine = (() => {
                     let fillStyle = '';
 
                     if (s.type === 'sentence') {
-                        // Menings-eldfluga logic
-                        const fart = lerp(8, 26, s.norm);
-                        const dtSec = dt; // dt is in seconds already? Yes, (time - lastTime)/1000
+                        // ── Biologiskt trovärdigt flygbeteende ──
+                        const fart = lerp(8, 26, s.norm); // Parallax: nära = snabbare
+                        const timeSec = time / 1000;
                         
-                        s.x += s.vx * dt + Math.sin(time/1000 * Math.PI * 2 * s.driftFreqX + s.driftPhaseX) * fart * dt;
-                        s.y += s.vy * dt + Math.cos(time/1000 * Math.PI * 2 * s.driftFreqY + s.driftPhaseY) * (fart * 0.5) * dt;
+                        // Svag slumpvandring: ändra riktning gradvis (aldrig ryck)
+                        s.wanderAngle += (Math.sin(timeSec * 0.7 + s.driftPhaseX * 3) * 0.3) * dt;
+                        const wanderX = Math.cos(s.wanderAngle) * fart * 0.15 * dt;
+                        const wanderY = Math.sin(s.wanderAngle) * fart * 0.15 * dt;
                         
-                        // Edge wrapping
-                        if (s.x < -20) s.x = mareldCanvas.width + 20;
-                        if (s.x > mareldCanvas.width + 20) s.x = -20;
-                        if (s.y < -20) s.y = mareldCanvas.height + 20;
-                        if (s.y > mareldCanvas.height + 20) s.y = -20;
+                        // Sinusvandring: mjuka J-kurvor (spec 2.4)
+                        const sinDriftX = Math.sin(timeSec * Math.PI * 2 * s.driftFreqX + s.driftPhaseX) * fart * dt;
+                        const sinDriftY = Math.cos(timeSec * Math.PI * 2 * s.driftFreqY + s.driftPhaseY) * (fart * 0.5) * dt;
                         
-                        if (config.prefersReducedMotion) {
+                        s.x += s.vx * dt + sinDriftX + wanderX;
+                        s.y += s.vy * dt + sinDriftY + wanderY;
+                        
+                        // Kantbeteende: mjuk tillbakavikning (spec 2.4)
+                        // Hastighetskomponenten speglas med glidning, flugan försvinner aldrig
+                        const W = window.innerWidth;
+                        const H = window.innerHeight;
+                        const margin = 30;
+                        if (s.x < margin) { s.vx += (margin - s.x) * 0.02; s.vx = Math.abs(s.vx) * 0.7; }
+                        if (s.x > W - margin) { s.vx -= (s.x - (W - margin)) * 0.02; s.vx = -Math.abs(s.vx) * 0.7; }
+                        if (s.y < margin) { s.vy += (margin - s.y) * 0.02; s.vy = Math.abs(s.vy) * 0.5; }
+                        if (s.y > H - margin) { s.vy -= (s.y - (H - margin)) * 0.02; s.vy = -Math.abs(s.vy) * 0.5; }
+                        
+                        // ── Bioluminescens (Photinus pyralis-mönster) ──
+                        if (s.fadeOut > 0) {
+                            // Uttoning: äldsta flugan dör mjukt (spec 2.5: 4s)
+                            s.fadeOut -= dt;
+                            drawAlpha = Math.max(0, s.fadeOut / 4.0) * 0.3;
+                            if (s.fadeOut <= 0) { s.active = false; continue; }
+                        } else if (config.prefersReducedMotion) {
                             drawAlpha = 0.5;
                         } else {
-                            s.blinkTimer += dtSec;
+                            s.blinkTimer += dt;
                             if (s.blinkState === 'attack') {
-                                drawAlpha = s.blinkTimer / 0.25;
+                                drawAlpha = clamp(s.blinkTimer / 0.25, 0, 1); // 0.25s attack
                                 if (s.blinkTimer >= 0.25) { s.blinkState = 'sustain'; s.blinkTimer = 0; }
                             } else if (s.blinkState === 'sustain') {
                                 drawAlpha = 1.0;
-                                if (s.blinkTimer >= 0.6) { s.blinkState = 'release'; s.blinkTimer = 0; }
+                                if (s.blinkTimer >= s.sustainDuration) { s.blinkState = 'release'; s.blinkTimer = 0; }
                             } else if (s.blinkState === 'release') {
-                                drawAlpha = 1.0 - (s.blinkTimer / 0.6);
+                                drawAlpha = 1.0 - clamp(s.blinkTimer / 0.6, 0, 1); // 0.6s release
                                 if (s.blinkTimer >= 0.6) { s.blinkState = 'dark'; s.blinkTimer = 0; }
                             } else if (s.blinkState === 'dark') {
-                                drawAlpha = 0.06; // faint
+                                drawAlpha = 0.06 * s.norm; // Svag prick i mörkret (nära = synligare)
                                 if (s.blinkTimer >= s.darkDuration) {
                                     s.blinkState = 'attack'; s.blinkTimer = 0;
                                     s.darkDuration = 1.5 + Math.random() * 2.5;
+                                    s.sustainDuration = 0.4 + Math.random() * 0.4;
                                 }
                             }
                         }
                         
                         const maxGlod = lerp(0.30, 0.95, s.norm);
                         drawAlpha = Math.max(0.06 * s.norm, drawAlpha * maxGlod);
-                        radius = lerp(1.2, 4.2, s.norm);
+                        radius = lerp(1.8, 5.0, s.norm); // Lite större för synlighet
                         
-                        // Kärna varmgul #ffe9a0, ytterglöd gulgrön #c8ff78
-                        const grad = mareldCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, radius * 2);
-                        grad.addColorStop(0, `rgba(255, 233, 160, ${drawAlpha})`);
-                        grad.addColorStop(1, `rgba(200, 255, 120, 0)`);
+                        // ── Vetenskapligt korrekt färg ──
+                        // Photinus pyralis: luciferin-emission ~560-590nm = varm orange-gul
+                        // Solid kärna (#ffb347 orange) med mjuk glöd (#ff8c00 mörk orange)
+                        const coreR = radius * 0.35; // Solid kärna
+                        const glowR = radius * 2.5;  // Mjuk ytterglöd
+                        const grad = mareldCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+                        grad.addColorStop(0, `rgba(255, 220, 130, ${drawAlpha})`);       // Het kärna (ljusgul-orange)
+                        grad.addColorStop(coreR / glowR, `rgba(255, 179, 71, ${drawAlpha * 0.9})`); // Solid orange
+                        grad.addColorStop(0.5, `rgba(255, 140, 0, ${drawAlpha * 0.4})`);  // Varm orange glöd
+                        grad.addColorStop(1, `rgba(255, 100, 0, 0)`);                     // Toning mot transparent
                         fillStyle = grad;
-                        radius = radius * 2; // draw size
+                        radius = glowR; // Rita hela glöden
                         
                         s.life -= dt;
                         
