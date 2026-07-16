@@ -317,9 +317,13 @@ export const ValsangEngine = (() => {
     }
 
     function handleKey(e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        handleChar(e.key);
+    }
+
+    function handleChar(key) {
         if (!ctx) init();
         if (ctx.state === 'suspended') ctx.resume();
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
         
         const now = performance.now();
         const dt = clamp(now - lastKeyTime, 60, 2000);
@@ -354,8 +358,6 @@ export const ValsangEngine = (() => {
             rootMidi = newRootMidi; // Glids per automatik på nästa frequency set
         }
 
-        const key = e.key || "";
-        if (!key) return;
         const lowKey = key.toLowerCase();
         const isCapital = (key !== lowKey);
 
@@ -517,6 +519,7 @@ export const ValsangEngine = (() => {
         init,
         destroy,
         handleKey,
+        handleChar,
         setVolume,
         setDepth,
         mute: (m) => setVolume(m ? 0 : 0.6), // Standardvolym 0.6, justeras av slider

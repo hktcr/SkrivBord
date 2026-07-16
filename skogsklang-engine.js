@@ -254,10 +254,35 @@ export const SkogsklangEngine = (() => {
         return null;
     }
 
+        function lightChordTone(startIx, stats, tempoNorm) {
+        if (activeAckordDegrees.length >= 5) return;
+        const degProp = Math.round(2 + (startIx / 28) * 8);
+        let degPrev = degProp;
+        if (prevSentenceDegrees.length > 0) {
+            degPrev = prevSentenceDegrees.reduce((p, c) => Math.abs(c - degProp) < Math.abs(p - degProp) ? c : p);
+        }
+        const deg = Math.round(degProp * stats.g + degPrev * (1 - stats.g));
+        const newDeg = getNextFreeDegree(deg);
+        if (newDeg === null || (newDeg - deg) > 3) return;
+        const v = voices.find(v => v.activeDegree === null);
+        if (!v) return;
+        const f = midiToFreq(degreeToMidi(newDeg, rootMidi));
+        v.sin.frequency.setValueAtTime(f, ctx.currentTime);
+        v.tri.frequency.setValueAtTime(f, ctx.currentTime);
+        v.gain.gain.setValueAtTime(0, ctx.currentTime);
+        v.gain.gain.setTargetAtTime(0.07, ctx.currentTime, lerp(1.2, 3.5, tempoNorm) / 3);
+        v.activeDegree = newDeg;
+        activeAckordDegrees.push(newDeg);
+    }
+
     function handleKey(e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        handleChar(e.key);
+    }
+
+    function handleChar(key) {
         if (!ctx) init();
         if (ctx.state === 'suspended') ctx.resume();
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
         
         const now = performance.now();
         const dt = clamp(now - lastKeyTime, 60, 2000);
@@ -294,7 +319,7 @@ export const SkogsklangEngine = (() => {
         baseOsc.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
         baseOscTri.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
 
-        if (key === 'Enter') {
+                if (key === 'Enter') {
             voices.forEach(v => {
                 if (v.activeDegree !== null) {
                     v.gain.gain.setTargetAtTime(0, ctx.currentTime, 3.0/3);
@@ -303,29 +328,25 @@ export const SkogsklangEngine = (() => {
             });
             activeAckordDegrees = [];
             currentWordChars = 0;
+            wordStartIx = null;
+            sentenceChars = 0;
+            sentenceLetters = 0;
             
         } else if (key === 'Backspace') {
-            // Ingen ljudgest enligt spec
+            // Ingen ljudgest
         } else if (key === ' ') {
-            // Nytt ord (Minst 2 bokstäver)
-            if (currentWordChars >= 2 && activeAckordDegrees.length < 5) {
-                // Vi använder charCounter (sparad från första bokstaven i ordet? Nej, spec säger "ordets första bokstavs index")
-                // Eftersom vi inte sparade första bokstaven använder vi meanAlpha eller slumpartat?
-                // Spec: "ix = ordets FÖRSTA bokstavs alfabetsindex"
-                // Vi löser detta genom att vi har sparat startix
-            }
+            if (currentWordChars >= 2) lightChordTone(wordStartIx ?? 14, stats, tempoNorm);
             currentWordChars = 0;
+            wordStartIx = null;
+            sentenceChars++;
             
         } else if (/[.,;:!?]/.test(key)) {
-            // Meningsslut
+            sentenceChars++;
             if (key === '?' || key === '.' || key === '!') {
-                const sentenceLen = Math.max(0, (window.TextContext ? window.TextContext.getText().length : 0) - (window._lastSentenceEnd || 0));
-                window._lastSentenceEnd = (window.TextContext ? window.TextContext.getText().length : 0);
-                
-                const isShort = sentenceLen < 3;
-                
-                if (!isShort && activeAckordDegrees.length > 0) {
-                    // Svällning
+                if (currentWordChars >= 2) {
+                    lightChordTone(wordStartIx ?? 14, stats, tempoNorm);
+                }
+                if (sentenceLetters >= 2) {
                     const maxGain = key === '!' ? 0.094 : 0.084;
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
@@ -334,8 +355,7 @@ export const SkogsklangEngine = (() => {
                     });
                     
                     if (key === '?') {
-                        // Sista ton
-                        const highestDeg = Math.max(...activeAckordDegrees);
+                        const highestDeg = Math.max(...activeAckordDegrees, 0);
                         const newDeg = getNextFreeDegree(highestDeg + 2);
                         if (newDeg !== null) {
                             const freeVoice = voices.find(v => v.activeDegree === null);
@@ -351,26 +371,26 @@ export const SkogsklangEngine = (() => {
                         }
                     }
                     
-                    // Borttoning
-                    const releaseTC = clamp(sentenceLen * 0.05, 2, 10);
+                    const releaseTC = clamp(sentenceChars * 0.05, 2, 10);
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
                             v.gain.gain.setTargetAtTime(0, ctx.currentTime + 1.0, releaseTC / 3);
-                            v.activeDegree = null; // Markera som inaktiv så de kan återanvändas
+                            v.activeDegree = null; 
                         }
                     });
                     
-                    // Spara degrees för tröghet
-                    prevSentenceDegrees = [...activeAckordDegrees];
-                    activeAckordDegrees = [];
-                    
-                    // Emitterar händelsen för eldfluga
                     if (onSentenceCallback) {
-                        onSentenceCallback({ length: sentenceLen });
+                        onSentenceCallback({ length: sentenceChars });
                     }
                 }
+                
+                prevSentenceDegrees = [...activeAckordDegrees];
+                activeAckordDegrees = [];
+                sentenceChars = 0; 
+                sentenceLetters = 0; 
+                currentWordChars = 0; 
+                wordStartIx = null;
             } else {
-                // , ; :
                 voices.forEach(v => {
                     if (v.activeDegree !== null) {
                         const cur = v.gain.gain.value;
@@ -379,62 +399,18 @@ export const SkogsklangEngine = (() => {
                     }
                 });
             }
-            currentWordChars = 0;
-            
         } else if (/[0-9]/.test(key)) {
             // Tyst
         } else if (ALPHABET.includes(lowKey)) {
-            const ix = ALPHABET.indexOf(lowKey);
             currentWordChars++;
-            
-            if (currentWordChars === 1) {
-                window._currentWordStartIx = ix;
-            }
-            
+            if (currentWordChars === 1) wordStartIx = ALPHABET.indexOf(lowKey);
+            sentenceChars++; 
+            sentenceLetters++;
             charCounter++;
             if (charCounter % 4 === 0 && activeAckordDegrees.length > 0) {
-                // Glimmer på senast tända ackordtonen
                 const lastDeg = activeAckordDegrees[activeAckordDegrees.length - 1];
                 playGlimmer(lastDeg);
             }
-        }
-        
-        // Kontrollera om ordet avslutades förra steget och nu startar nytt, ELLER hantera mellanslaget direkt:
-        if (key === ' ' && window._lastWordChars >= 2 && activeAckordDegrees.length < 5) {
-            const ix = window._currentWordStartIx || 14;
-            const degProp = Math.round(2 + (ix / 28) * 8);
-            
-            let degPrev = degProp;
-            if (prevSentenceDegrees.length > 0) {
-                // Närmaste ton i föregående mening
-                degPrev = prevSentenceDegrees.reduce((prev, curr) => Math.abs(curr - degProp) < Math.abs(prev - degProp) ? curr : prev);
-            }
-            
-            let deg = Math.round(degProp * g + degPrev * (1 - g));
-            
-            const newDeg = getNextFreeDegree(deg);
-            if (newDeg !== null && (newDeg - deg) <= 3) {
-                const freeVoice = voices.find(v => v.activeDegree === null);
-                if (freeVoice) {
-                    const targetFreq = midiToFreq(degreeToMidi(newDeg, rootMidi));
-                    
-                    // Glide om frekvensen ändras extremt? Nej, ny röst, sätt direkt
-                    freeVoice.sin.frequency.setValueAtTime(targetFreq, ctx.currentTime);
-                    freeVoice.tri.frequency.setValueAtTime(targetFreq, ctx.currentTime);
-                    
-                    const attack = lerp(1.2, 3.5, tempoNorm);
-                    freeVoice.gain.gain.setValueAtTime(0, ctx.currentTime);
-                    freeVoice.gain.gain.setTargetAtTime(0.07, ctx.currentTime, attack / 3);
-                    
-                    freeVoice.activeDegree = newDeg;
-                    activeAckordDegrees.push(newDeg);
-                }
-            }
-        }
-        
-        if (key === ' ') {
-            window._lastWordChars = currentWordChars;
-            currentWordChars = 0;
         }
     }
 
@@ -442,6 +418,7 @@ export const SkogsklangEngine = (() => {
         init,
         destroy,
         handleKey,
+        handleChar,
         setVolume,
         setDepth,
         mute: (m) => setVolume(m ? 0 : 0.6),

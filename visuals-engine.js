@@ -19,7 +19,7 @@ export const VisualsEngine = (() => {
         mareldGoalType: 'words', // 'words' or 'time'
         mareldStartTime: 0,
         mareldStartChars: 0,
-        vindsusMode: false,
+        skogstemaMode: false,
         fireflyMode: 'sentence', // 'sentence', 'goal', 'off'
         goalProgress: 0,
         prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -97,7 +97,7 @@ export const VisualsEngine = (() => {
         config = { ...config, ...newConfig };
         
         // Vindsus-läget tvingar bort havstemat
-        if (config.vindsusMode) {
+        if (config.skogstemaMode) {
             config.djupvattenEnabled = false;
             if (config.sonogramEnabled) {
                 config.sonogramEnabled = false;
@@ -206,13 +206,12 @@ export const VisualsEngine = (() => {
                 // assume ~5 chars per word, so if target is words, overage in chars?
                 // The spec says 50 tecken. 
                 // Let's assume the user logic passes the actual metric. We'll use 50 units for simplicity.
-                // Wait, I need a global char counter.
-                const written = Math.max(0, window._charsTotal || 0 - config.mareldStartChars);
+                const written = Math.max(0, (window._charsTotal || 0) - config.mareldStartChars);
                 const over = written - config.mareldGoalTarget;
                 overage = Math.min(1, Math.max(0, over / 50.0));
             }
             
-            if (config.vindsusMode) {
+            if (config.skogstemaMode) {
                 mareldVeil.style.opacity = '0';
             } else {
                 const opacity = 0.25 + (0.97 - 0.25) * overage;
@@ -224,7 +223,7 @@ export const VisualsEngine = (() => {
     }
 
     function spawnSparks(count, intensity) {
-        if (config.vindsusMode) {
+        if (config.skogstemaMode) {
             count = Math.max(1, Math.floor(count / 2)); // Färre eldflugor vid tangenttryck
         }
         
@@ -236,7 +235,7 @@ export const VisualsEngine = (() => {
                 s.x = Math.random() * window.innerWidth;
                 s.y = window.innerHeight * (0.3 + 0.5 * Math.random()); // 30-80% height
                 
-                if (config.vindsusMode) {
+                if (config.skogstemaMode) {
                     s.vx = (Math.random() * 30 + 10) * (Math.random() > 0.5 ? 1 : -1);
                     s.vy = -Math.random() * 20 - 5;
                     s.maxLife = Math.random() * 4 + 3 + intensity * 2;
@@ -270,7 +269,7 @@ export const VisualsEngine = (() => {
     }
 
     function spawnSentenceFirefly(length) {
-        if (!config.vindsusMode || config.fireflyMode !== 'sentence') return;
+        if (!config.skogstemaMode || config.fireflyMode !== 'sentence') return;
         
         // Mappning enligt spec
         const norm = clamp((length - 15) / (150 - 15), 0, 1);
@@ -397,7 +396,7 @@ export const VisualsEngine = (() => {
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
             // Ambient spawn for Eldflugor based on goal progress (if goal mode)
-            if (config.vindsusMode && config.goalProgress > 0 && config.fireflyMode === 'goal') {
+            if (config.skogstemaMode && config.goalProgress > 0 && config.fireflyMode === 'goal') {
                 const targetAmbient = Math.floor(config.goalProgress * 60); // Up to 60 fireflies at 100%
                 let currentAmbient = sparks.filter(s => s.active).length;
                 if (currentAmbient < targetAmbient && Math.random() < 0.05) {
@@ -466,7 +465,7 @@ export const VisualsEngine = (() => {
                         s.x += s.vx * dt;
                         s.y += s.vy * dt;
                         
-                        if (config.vindsusMode) {
+                        if (config.skogstemaMode) {
                             s.x += Math.sin(time/1000 + i) * 0.5;
                             s.y += Math.cos(time/1200 + i) * 0.3;
                         }
@@ -478,7 +477,7 @@ export const VisualsEngine = (() => {
                         }
                         
                         const alpha = s.life / s.maxLife;
-                        if (config.vindsusMode) {
+                        if (config.skogstemaMode) {
                             const pulse = Math.abs(Math.sin((s.maxLife - s.life) * 3));
                             radius = 1 + pulse * 2.5;
                             fillStyle = `rgba(200, 255, 120, ${alpha.toFixed(2)})`;
@@ -497,7 +496,7 @@ export const VisualsEngine = (() => {
                     }
                 }
             }
-            if (activeSparks > 0 || (config.vindsusMode && config.goalProgress > 0)) needsNextFrame = true;
+            if (activeSparks > 0 || (config.skogstemaMode && config.goalProgress > 0)) needsNextFrame = true;
         }
 
         // Render Sonogram

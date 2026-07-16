@@ -1785,11 +1785,9 @@
 </head>
 
 <body>
-    <!-- VALSÅNG ENGINE & VINDSUS ENGINE -->
+    <!-- TEXT CONTEXT -->
     <script src="text-context.js"></script>
-    <script src="valsang-engine.js"></script>
-    <script src="vindsus-engine.js"></script>
-    
+        
     <div id="toastContainer"></div>
 
     <!-- TOOLBAR -->
@@ -2019,8 +2017,7 @@
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="vintage">Vintage (Tung)</option>
                     <option value="valsang">Valsång (Kontinuerlig)</option>
-                    <option value="vindsus">Vindsus (Fokus: Eteriskt sus)</option>
-                    <option value="skogsklang">Skogsklang (Harmoniskt & Eldflugor)</option>
+                                        <option value="skogsklang">Skogsklang (Harmoniskt & Eldflugor)</option>
                 </select>
                 <div class="setting-desc">OBS: Gäller endast i fullskärmsläge.</div>
             </div>
@@ -2176,8 +2173,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
-    <script src="./vindsus-engine.js"></script>
-    <script type="module">
+        <script type="module">
         import { ValsangEngine } from './valsang-engine.js';
         import { SkogsklangEngine } from './skogsklang-engine.js';
         import { VisualsEngine } from './visuals-engine.js';
@@ -2213,6 +2209,13 @@
         // Audio API för skrivmaskinsljud
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
+
+        // AudioContext resume on user interaction for iOS
+        document.addEventListener('pointerdown', () => {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }, { once: false });
 
         const DEFAULT_SETTINGS = {
             previewBg: '#ffffff',
@@ -3117,8 +3120,7 @@
                 overlay.classList.remove('bg-image');
             }
             
-            // Override with forest-bg if vindsus or skogsklang is active
-            if (typewriterSoundProfile === 'vindsus' || typewriterSoundProfile === 'skogsklang') {
+            if (typewriterSoundProfile === 'skogsklang') {
                 overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
                 overlay.style.backgroundSize = 'cover';
             } else {
@@ -3180,7 +3182,7 @@
             startZenTimer();
 
             // Initiera Valsång/Vindsus/Skogsklang om det är valt
-            const isContinuousProfile = ['valsang', 'vindsus', 'skogsklang'].includes(typewriterSoundProfile);
+            const isContinuousProfile = ['valsang', 'skogsklang'].includes(typewriterSoundProfile);
             if (isContinuousProfile && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -3189,9 +3191,6 @@
                     window.ValsangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                     window.ValsangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
                 }
-                if (typewriterSoundProfile === 'vindsus' && window.VindsusEngine) {
-                    window.VindsusEngine.init(audioCtx, audioCtx.destination);
-                    window.VindsusEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                 }
                 if (typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
                     window.SkogsklangEngine.init(audioCtx);
@@ -3221,7 +3220,7 @@
                     sonogramEnabled: settings.valsangSonogram !== false,
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
-                    vindsusMode: (typewriterSoundProfile === 'vindsus' || typewriterSoundProfile === 'skogsklang'),
+                    skogstemaMode: (typewriterSoundProfile === 'skogsklang'),
                     fireflyMode: settings.fireflyMode || 'sentence',
                     goalProgress: window._currentGoalProgress || 0,
                     theme: 'dark'
@@ -3260,13 +3259,10 @@
             if (window.ValsangEngine) {
                 window.ValsangEngine.destroy();
             }
-            if (window.VindsusEngine) {
-                window.VindsusEngine.destroy();
             }
             if (window.VisualsEngine) {
                 window.VisualsEngine.stop();
             }
-            overlay.style.background = ""; // Återställ vindsus-bakgrund
 
             // Exit browser fullscreen if active
             if (document.fullscreenElement) {
@@ -3329,8 +3325,6 @@
                     return; // Hoppa över vanliga ljud
                 }
                 
-                if (typewriterSoundProfile === 'vindsus') {
-                    if (window.VindsusEngine) window.VindsusEngine.handleKey(e.key);
                     return;
                 }
                 
@@ -3779,20 +3773,17 @@
             saveSettings(settings);
             applySettings(settings);
             
-            const isContinuous = ['valsang', 'vindsus', 'skogsklang'].includes(settings.typewriterSoundProfile);
+            const isContinuous = ['valsang', 'skogsklang'].includes(settings.typewriterSoundProfile);
             document.getElementById('valsangSettings').style.display = isContinuous ? 'flex' : 'none';
             document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
-            document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang' || settings.typewriterSoundProfile === 'vindsus') ? 'block' : 'none';
+            document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang') ? 'block' : 'none';
             
             if (window.ValsangEngine) window.ValsangEngine.destroy();
-            if (window.VindsusEngine) window.VindsusEngine.destroy();
             if (window.SkogsklangEngine) window.SkogsklangEngine.destroy();
             
             if (isContinuous && settings.typewriterSound && isFullscreen) {
                 if (settings.typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
                     window.ValsangEngine.init(audioCtx);
-                } else if (settings.typewriterSoundProfile === 'vindsus' && window.VindsusEngine) {
-                    window.VindsusEngine.init(audioCtx, audioCtx.destination);
                 } else if (settings.typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
                     window.SkogsklangEngine.init(audioCtx);
                     window.SkogsklangEngine.onSentence((info) => {
@@ -3804,7 +3795,7 @@
                 
                 if (window.VisualsEngine) {
                     window.VisualsEngine.setConfig({ 
-                        vindsusMode: (settings.typewriterSoundProfile === 'vindsus' || settings.typewriterSoundProfile === 'skogsklang'),
+                        skogstemaMode: (settings.settings.typewriterSoundProfile === 'skogsklang'),
                         fireflyMode: settings.fireflyMode || 'sentence'
                     });
                     
@@ -3824,7 +3815,7 @@
             // Uppdatera bakgrund direkt om vi är i fullscreen
             if (isFullscreen) {
                 const overlay = document.getElementById('fullscreenOverlay');
-                if (settings.typewriterSoundProfile === 'vindsus' || settings.typewriterSoundProfile === 'skogsklang') {
+                if (settings.settings.typewriterSoundProfile === 'skogsklang') {
                     overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('forest-bg.jpg') no-repeat center center";
                     overlay.style.backgroundSize = 'cover';
                 } else {
@@ -3849,8 +3840,6 @@
                 window.ValsangEngine.setVolume(settings.valsangVol);
                 window.ValsangEngine.setDepth(settings.valsangDepth);
             }
-            if (window.VindsusEngine) {
-                window.VindsusEngine.setVolume(settings.valsangVol);
             }
             if (window.SkogsklangEngine) {
                 window.SkogsklangEngine.setVolume(settings.valsangVol);
@@ -4324,11 +4313,11 @@
                 document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
             }
             
-            const isContinuousProfile = ['valsang', 'vindsus', 'skogsklang'].includes(settings.typewriterSoundProfile);
+            const isContinuousProfile = ['valsang', 'skogsklang'].includes(settings.typewriterSoundProfile);
             if (isContinuousProfile) {
                 document.getElementById('valsangSettings').style.display = 'flex';
                 document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
-                document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang' || settings.typewriterSoundProfile === 'vindsus') ? 'block' : 'none';
+                document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang') ? 'block' : 'none';
             }
             
             if (settings.fireflyMode) {
