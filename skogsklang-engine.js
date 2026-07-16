@@ -354,10 +354,10 @@ export const SkogsklangEngine = (() => {
                     lightChordTone(wordStartIx ?? 14, stats, tempoNorm);
                 }
                 if (sentenceLetters >= 2) {
-                    const maxGain = key === '!' ? 0.084 : 0.074; // Softer max
+                    const maxGain = key === '!' ? 0.095 : 0.084; // +35% resp +20% av 0.07
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
-                            v.gain.gain.setTargetAtTime(maxGain, ctx.currentTime, 2.0/3); // Slower swell
+                            v.gain.gain.setTargetAtTime(maxGain, ctx.currentTime, 0.8/3); // 0.8s swell
                         }
                     });
                     

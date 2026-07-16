@@ -270,7 +270,7 @@ export const VisualsEngine = (() => {
     }
 
     function spawnSentenceFirefly(length) {
-        if (!config.skogstemaMode || config.fireflyMode !== 'sentence') return;
+        if (!config.skogstemaMode || (config.fireflyMode && config.fireflyMode !== 'sentence')) return;
         
         // Mappning enligt spec
         const norm = clamp((length - 15) / (150 - 15), 0, 1);

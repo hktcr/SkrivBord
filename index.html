@@ -3197,7 +3197,7 @@
                     window.SkogsklangEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                     window.SkogsklangEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
                     window.SkogsklangEngine.onSentence(info => {
-                        if (window.VisualsEngine && settings.fireflyMode === 'sentence') {
+                        if (window.VisualsEngine) {
                             window.VisualsEngine.spawnSentenceFirefly(info.length);
                         }
                     });
@@ -3819,7 +3819,7 @@
                 } else if (settings.typewriterSoundProfile === 'skogsklang' && window.SkogsklangEngine) {
                     window.SkogsklangEngine.init(audioCtx);
                     window.SkogsklangEngine.onSentence((info) => {
-                        if (window.VisualsEngine && settings.fireflyMode === 'sentence') {
+                        if (window.VisualsEngine) {
                             window.VisualsEngine.spawnSentenceFirefly(info.length);
                         }
                     });
