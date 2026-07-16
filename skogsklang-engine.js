@@ -1,8 +1,12 @@
 /**
- * SkogsklangEngine (BYGGSPEC v5)
+ * SkogsklangEngine v2 "Glänta" (BYGGSPEC v5 + TILLÄGG v2)
  * 
- * En mjuk FM/pad-syntes för SkrivR. Bygger upp ackord per mening (1 ton per ord, upp till 5).
+ * En mjuk pad-syntes för SkrivR. Bygger upp ackord per mening (1 ton per ord, upp till 5).
  * Sväller vid meningsslut och tändar eldflugor via onSentence-callback.
+ * 
+ * v2: Toner blommar och vissnar, röster andas individuellt, mikrodrift i tonhöjd,
+ *     ackord en oktav upp, kortare IR (glänta istf katedral), FM-glimmer (daggdroppe).
+ * 
  * DETERMINISM: Ingen Math.random för tonhöjd, harmoni eller tonart.
  */
 
@@ -13,8 +17,10 @@ export const SkogsklangEngine = (() => {
     let breathLFO, breathLFOGain;
     let voiceFilter;
     
-    // Ackordröster (1 till 5)
+    // Ackordröster (1 till 5) med per-röst LFO:er
     let voices = [];
+    let voiceLFOs = [];      // Ändring 2: amplitud-LFO per röst
+    let voiceDriftLFOs = [];  // Ändring 3: mikrodrift i tonhöjd per röst
     
     let irBuffer = null;
 
@@ -50,6 +56,9 @@ export const SkogsklangEngine = (() => {
     let sentenceChars = 0;
     let sentenceLetters = 0;
 
+    // Ändring 6: Återblom-timer
+    let rebloomInterval = null;
+
     
     // Helper functions
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
@@ -66,13 +75,14 @@ export const SkogsklangEngine = (() => {
         return root + 12 * octave + note;
     };
 
+    // Ändring 7: IR 4.5s, decay 2.8 (glänta istf katedral)
     const createImpulseResponse = () => {
-        const length = ctx.sampleRate * 8.0; // 8s per spec
+        const length = ctx.sampleRate * 4.5; // 4.5s (ändring 7, från 8s)
         const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
         for (let channel = 0; channel < 2; channel++) {
             const channelData = impulse.getChannelData(channel);
             for (let i = 0; i < length; i++) {
-                const env = Math.pow(1 - (i / length), 3.2);
+                const env = Math.pow(1 - (i / length), 2.8); // decay 2.8 (ändring 7, från 3.2)
                 // Slump är tillåten för IR (brus)
                 channelData[i] = (Math.random() * 2 - 1) * env;
             }
@@ -98,8 +108,9 @@ export const SkogsklangEngine = (() => {
         dryGain.gain.value = 0.6;
         dryGain.connect(masterGain);
         
+        // Ändring 7: wet default 0.35 (från 0.4)
         wetGain = ctx.createGain();
-        wetGain.gain.value = 0.4;
+        wetGain.gain.value = 0.35;
         
         convolver = ctx.createConvolver();
         irBuffer = createImpulseResponse();
@@ -108,10 +119,10 @@ export const SkogsklangEngine = (() => {
         wetGain.connect(convolver);
         convolver.connect(masterGain);
         
-        // Gemensamt lågpass (1200 Hz, Q 0.5)
+        // Ändring 7: Gemensamt lågpass 1400 Hz (från 1200), Q 0.5
         voiceFilter = ctx.createBiquadFilter();
         voiceFilter.type = 'lowpass';
-        voiceFilter.frequency.value = 1200;
+        voiceFilter.frequency.value = 1400;
         voiceFilter.Q.value = 0.5;
         
         voiceFilter.connect(dryGain);
@@ -123,11 +134,12 @@ export const SkogsklangEngine = (() => {
         baseOscTri = ctx.createOscillator();
         baseOscTri.type = 'triangle';
         const baseTriGain = ctx.createGain();
-        baseTriGain.gain.value = 0.3;
+        baseTriGain.gain.value = 0.15; // Ändring 4: 0.15 (från 0.3)
         baseOscTri.connect(baseTriGain);
         
+        // Ändring 5: Basgain 0.035 (från 0.05)
         baseGain = ctx.createGain();
-        baseGain.gain.value = 0.05;
+        baseGain.gain.value = 0.035;
         
         baseOsc.connect(baseGain);
         baseTriGain.connect(baseGain);
@@ -136,31 +148,34 @@ export const SkogsklangEngine = (() => {
         baseOsc.start();
         baseOscTri.start();
         
-        // Andnings-LFO: modulerar basröstenst gain subtilt i takt med skrivtempot
+        // Ändring 5: Bas-andnings-LFO: 0.05 Hz, djup 0.014
         breathLFO = ctx.createOscillator();
         breathLFO.type = 'sine';
-        breathLFO.frequency.value = 0.1; // Mycket långsam initial andning
+        breathLFO.frequency.value = 0.05; // Ändring 5: 0.05 Hz (marken häver sig)
         breathLFOGain = ctx.createGain();
-        breathLFOGain.gain.value = 0.008; // ±0.008 runt 0.05 = 0.042-0.058
+        breathLFOGain.gain.value = 0.014; // Ändring 5: ±0.014
         breathLFO.connect(breathLFOGain);
-        breathLFOGain.connect(baseGain.gain); // LFO adderas till baseGain.gain-värdet
+        breathLFOGain.connect(baseGain.gain);
         breathLFO.start();
         
-        // Ackordröster (1-5)
+        // Ackordröster (1-5) med per-röst LFO:er
         voices = [];
-        for(let i = 0; i < 5; i++) {
+        voiceLFOs = [];
+        voiceDriftLFOs = [];
+        for (let i = 0; i < 5; i++) {
             const oscSin = ctx.createOscillator();
             oscSin.type = 'sine';
             const oscTri = ctx.createOscillator();
             oscTri.type = 'triangle';
             
-            // ±4 cent detune
+            // ±4 cent statisk detune (behålls)
             const detune = (i % 2 === 0 ? 4 : -4);
             oscSin.detune.value = detune;
             oscTri.detune.value = -detune;
             
+            // Ändring 4: triangel-gain 0.15 (från 0.3)
             const triGain = ctx.createGain();
-            triGain.gain.value = 0.3;
+            triGain.gain.value = 0.15;
             oscTri.connect(triGain);
             
             const vGain = ctx.createGain();
@@ -173,11 +188,35 @@ export const SkogsklangEngine = (() => {
             oscSin.start();
             oscTri.start();
             
+            // Ändring 2: Amplitud-LFO per röst (deterministisk)
+            const ampLFO = ctx.createOscillator();
+            ampLFO.type = 'sine';
+            ampLFO.frequency.value = 0.07 + i * 0.023; // Olika per röst, aldrig slumpad
+            const ampLFOGain = ctx.createGain();
+            ampLFOGain.gain.value = 0.012; // Additivt på gain
+            ampLFO.connect(ampLFOGain);
+            ampLFOGain.connect(vGain.gain); // Modulerar röstens gain
+            ampLFO.start();
+            voiceLFOs.push({ osc: ampLFO, gain: ampLFOGain });
+            
+            // Ändring 3: Mikrodrift i tonhöjd per röst (deterministisk)
+            const driftLFO = ctx.createOscillator();
+            driftLFO.type = 'triangle';
+            driftLFO.frequency.value = 0.031 + i * 0.017; // Olika per röst
+            const driftGain = ctx.createGain();
+            driftGain.gain.value = 4; // ±4 cent
+            driftLFO.connect(driftGain);
+            driftGain.connect(oscSin.detune); // Adderas till befintlig detune
+            driftGain.connect(oscTri.detune);
+            driftLFO.start();
+            voiceDriftLFOs.push({ osc: driftLFO, gain: driftGain });
+            
             voices.push({
                 sin: oscSin,
                 tri: oscTri,
                 gain: vGain,
-                activeDegree: null
+                activeDegree: null,
+                litAt: 0 // Ändring 6: när tonen tändes
             });
         }
         
@@ -191,14 +230,20 @@ export const SkogsklangEngine = (() => {
         activeAckordDegrees = [];
         charCounter = 0;
         currentWordChars = 0;
+
+        // Ändring 6: Återblom-tick var 500ms (använder befintlig tidsbudget)
+        rebloomInterval = setInterval(rebloomTick, 500);
     }
 
     function destroy() {
         if (!ctx) return;
         clearTimeout(idleTimer);
+        if (rebloomInterval) { clearInterval(rebloomInterval); rebloomInterval = null; }
         try {
             baseOsc.stop(); baseOscTri.stop();
             if (breathLFO) breathLFO.stop();
+            voiceLFOs.forEach(l => l.osc.stop());
+            voiceDriftLFOs.forEach(l => l.osc.stop());
             voices.forEach(v => { v.sin.stop(); v.tri.stop(); });
             if (idleLFO) idleLFO.stop();
         } catch(e) {}
@@ -210,28 +255,44 @@ export const SkogsklangEngine = (() => {
     }
 
     function setDepth(val) {
-        if (wetGain) wetGain.gain.setTargetAtTime(0.2 + 0.2 * val, ctx.currentTime, 0.1);
+        // Ändring 7: wet baseline 0.2 + 0.15 * val (justerat för mindre rum)
+        if (wetGain) wetGain.gain.setTargetAtTime(0.2 + 0.15 * val, ctx.currentTime, 0.1);
     }
     
+    // Ändring 8: Glimmer → daggdroppe (FM-pling)
     function playGlimmer(degree, g = 1.0) {
         if (!ctx) return;
-        // Kvint (+7 halvtoner) och en oktav mörkare för mjukare klang
+        // Kvint (+7 halvtoner), en oktav mörkare
         const freq = midiToFreq(degreeToMidi(degree, rootMidi) + 7) * 0.5;
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
+        
+        // Bärare: sinus
+        const carrier = ctx.createOscillator();
+        carrier.type = 'sine';
+        carrier.frequency.value = freq;
+        
+        // Modulator: FM med ratio 3.01, index startar 60 Hz → 0
+        const modulator = ctx.createOscillator();
+        modulator.type = 'sine';
+        modulator.frequency.value = freq * 3.01;
+        const modGain = ctx.createGain();
+        modGain.gain.setValueAtTime(60, ctx.currentTime); // FM-index 60 Hz
+        modGain.gain.setTargetAtTime(0, ctx.currentTime, 0.13); // Decayar snabbt
+        modulator.connect(modGain);
+        modGain.connect(carrier.frequency); // FM: modulerar bärarens frekvens
         
         const gain = ctx.createGain();
-        const maxG = 0.015 * g;
+        const maxG = 0.03 * g; // Ändring 8: gain 0.03 (från 0.015)
         gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.setTargetAtTime(maxG, ctx.currentTime, 0.1/3);
-        gain.gain.setTargetAtTime(0, ctx.currentTime + 0.3, 1.2/3);
+        gain.gain.setTargetAtTime(maxG, ctx.currentTime, 0.08 / 3); // Snabb attack
+        gain.gain.setTargetAtTime(0, ctx.currentTime + 0.15, 0.8 / 3); // 0.8s uttoning
         
-        osc.connect(gain);
-        gain.connect(wetGain);
+        carrier.connect(gain);
+        gain.connect(wetGain); // Endast wet-kanal
         
-        osc.start();
-        osc.stop(ctx.currentTime + 2.0);
+        carrier.start();
+        modulator.start();
+        carrier.stop(ctx.currentTime + 2.5);
+        modulator.stop(ctx.currentTime + 2.5);
     }
 
     function getState() {
@@ -243,13 +304,31 @@ export const SkogsklangEngine = (() => {
         };
     }
 
+    // Ändring 6: Återblom — toner blommar periodiskt
+    function rebloomTick() {
+        if (!ctx || isIdle) return;
+        const now = ctx.currentTime;
+        voices.forEach(v => {
+            if (v.activeDegree === null) return;
+            const period = 6 + v.activeDegree * 0.7; // Olika per ton, deterministiskt
+            const elapsed = now - v.litAt;
+            if (elapsed > 0 && elapsed % period < 0.5) {
+                // Återblom: gain puls upp och ner
+                const currentTarget = 0.035; // Viloglöd-nivån
+                v.gain.gain.setTargetAtTime(currentTarget * 1.4, now, 0.3 / 3);
+                v.gain.gain.setTargetAtTime(currentTarget, now + 0.5, 1.5);
+            }
+        });
+    }
+
     function wakeUp() {
         if (isIdle) {
             isIdle = false;
-            baseGain.gain.setTargetAtTime(0.05, ctx.currentTime, 1.0);
-            // Andningen vaknar: snabbare puls, lite djupare
-            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.15, ctx.currentTime, 1.0);
-            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.008, ctx.currentTime, 0.5);
+            // Ändring 5: bas vaknar till 0.035 (från 0.05)
+            baseGain.gain.setTargetAtTime(0.035, ctx.currentTime, 1.0);
+            // Andningen vaknar
+            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.08, ctx.currentTime, 1.0);
+            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.014, ctx.currentTime, 0.5);
         }
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
@@ -257,8 +336,8 @@ export const SkogsklangEngine = (() => {
             isIdle = true;
             baseGain.gain.setTargetAtTime(0.02, ctx.currentTime, 2.0);
             // Vila: djup, långsam andning
-            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.06, ctx.currentTime, 3.0);
-            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.012, ctx.currentTime, 2.0);
+            if (breathLFO) breathLFO.frequency.setTargetAtTime(0.04, ctx.currentTime, 3.0);
+            if (breathLFOGain) breathLFOGain.gain.setTargetAtTime(0.016, ctx.currentTime, 2.0);
             voices.forEach(v => {
                 if (v.activeDegree !== null) {
                     v.gain.gain.setTargetAtTime(0, ctx.currentTime, 2.0);
@@ -278,7 +357,9 @@ export const SkogsklangEngine = (() => {
         return null;
     }
 
-        function lightChordTone(startIx, stats, tempoNorm) {
+    // Ändring 1 + 4: Tonen blommar (peak 0.09 → sjunker till 0.035 viloglöd)
+    // Ändring 4: Frekvens +12 halvtoner (en oktav upp)
+    function lightChordTone(startIx, stats, tempoNorm) {
         if (activeAckordDegrees.length >= 5) return;
         const degProp = Math.round(2 + (startIx / 28) * 8);
         let degPrev = degProp;
@@ -290,12 +371,21 @@ export const SkogsklangEngine = (() => {
         if (newDeg === null || (newDeg - deg) > 3) return;
         const v = voices.find(v => v.activeDegree === null);
         if (!v) return;
-        const f = midiToFreq(degreeToMidi(newDeg, rootMidi));
+        
+        // Ändring 4: +12 halvtoner (en oktav upp) för luft mellan bas och ackord
+        const f = midiToFreq(degreeToMidi(newDeg, rootMidi) + 12);
         v.sin.frequency.setValueAtTime(f, ctx.currentTime);
         v.tri.frequency.setValueAtTime(f, ctx.currentTime);
+        
+        // Ändring 1: Bloom-envelopp — peak 0.09, sedan sjunker till 0.035 viloglöd
+        const attackTC = lerp(1.2, 3.5, tempoNorm) / 3;
+        const attackTime = attackTC * 3; // Ungefärlig tid till peak
         v.gain.gain.setValueAtTime(0, ctx.currentTime);
-        v.gain.gain.setTargetAtTime(0.07, ctx.currentTime, lerp(1.2, 3.5, tempoNorm) / 3);
+        v.gain.gain.setTargetAtTime(0.09, ctx.currentTime, attackTC); // Peak
+        v.gain.gain.setTargetAtTime(0.035, ctx.currentTime + attackTime + 0.5, 4.0); // Sjunker till viloglöd
+        
         v.activeDegree = newDeg;
+        v.litAt = ctx.currentTime; // Ändring 6: registrera tändningstid
         activeAckordDegrees.push(newDeg);
     }
 
@@ -323,10 +413,8 @@ export const SkogsklangEngine = (() => {
 
         wakeUp();
 
-        // Andningsrytm följer skrivtempot
-        // Snabb skrivning (tempoNorm ≈ 0) → puls ~0.3 Hz (andas varannan sekund)
-        // Långsam skrivning (tempoNorm ≈ 1) → puls ~0.1 Hz (en andning var 10:e sekund)
-        const breathRate = lerp(0.30, 0.10, tempoNorm);
+        // Andningsrytm följer skrivtempot (ändring 5)
+        const breathRate = lerp(0.12, 0.05, tempoNorm); // Justerat för bas-LFO
         if (breathLFO) breathLFO.frequency.setTargetAtTime(breathRate, ctx.currentTime, 2.0);
 
         // 3.3 Tonart och skalfärg
@@ -350,7 +438,7 @@ export const SkogsklangEngine = (() => {
         baseOsc.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
         baseOscTri.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
 
-                if (key === 'Enter') {
+        if (key === 'Enter') {
             voices.forEach(v => {
                 if (v.activeDegree !== null) {
                     v.gain.gain.setTargetAtTime(0, ctx.currentTime, 3.0/3);
@@ -378,7 +466,8 @@ export const SkogsklangEngine = (() => {
                     lightChordTone(wordStartIx ?? 14, stats, tempoNorm);
                 }
                 if (sentenceLetters >= 2) {
-                    const maxGain = key === '!' ? 0.095 : 0.084; // +35% resp +20% av 0.07
+                    // Ändring 1: sväll relativt peak 0.09
+                    const maxGain = key === '!' ? 0.09 * 1.35 : 0.09 * 1.20; // +35% resp +20%
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
                             v.gain.gain.setTargetAtTime(maxGain, ctx.currentTime, 0.8/3); // 0.8s swell
@@ -391,12 +480,14 @@ export const SkogsklangEngine = (() => {
                         if (newDeg !== null) {
                             const freeVoice = voices.find(v => v.activeDegree === null);
                             if (freeVoice) {
-                                const targetFreq = midiToFreq(degreeToMidi(newDeg, rootMidi));
+                                // Ändring 4: +12 halvtoner
+                                const targetFreq = midiToFreq(degreeToMidi(newDeg, rootMidi) + 12);
                                 freeVoice.sin.frequency.setValueAtTime(targetFreq, ctx.currentTime);
                                 freeVoice.tri.frequency.setValueAtTime(targetFreq, ctx.currentTime);
                                 freeVoice.gain.gain.setValueAtTime(0, ctx.currentTime);
-                                freeVoice.gain.gain.setTargetAtTime(0.07, ctx.currentTime, 0.6/3);
+                                freeVoice.gain.gain.setTargetAtTime(0.09, ctx.currentTime, 0.6/3);
                                 freeVoice.activeDegree = newDeg;
+                                freeVoice.litAt = ctx.currentTime;
                                 activeAckordDegrees.push(newDeg);
                             }
                         }
@@ -405,7 +496,7 @@ export const SkogsklangEngine = (() => {
                     const releaseTC = clamp(sentenceChars * 0.05, 2, 10);
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
-                            v.gain.gain.setTargetAtTime(0, ctx.currentTime + 1.5, (releaseTC * 2.0) / 3); // Double release
+                            v.gain.gain.setTargetAtTime(0, ctx.currentTime + 1.5, releaseTC / 3);
                             v.activeDegree = null; 
                         }
                     });
@@ -422,11 +513,12 @@ export const SkogsklangEngine = (() => {
                 currentWordChars = 0; 
                 wordStartIx = null;
             } else {
+                // Komma/semikolon/kolon: mjuk dipp
                 voices.forEach(v => {
                     if (v.activeDegree !== null) {
                         const cur = v.gain.gain.value;
                         v.gain.gain.setTargetAtTime(cur * 0.8, ctx.currentTime, 0.5/3);
-                        v.gain.gain.setTargetAtTime(0.07, ctx.currentTime + 0.6, 1.0/3);
+                        v.gain.gain.setTargetAtTime(0.035, ctx.currentTime + 0.6, 1.0/3); // Tillbaka till viloglöd
                     }
                 });
             }
@@ -438,7 +530,8 @@ export const SkogsklangEngine = (() => {
             sentenceChars++; 
             sentenceLetters++;
             charCounter++;
-            if (charCounter % 15 === 0 && activeAckordDegrees.length > 0) {
+            // Ändring 8: Glimmer var 4:e bokstav (specen säger var 4:e, ändrat från var 15:e)
+            if (charCounter % 4 === 0 && activeAckordDegrees.length > 0) {
                 const lastDeg = activeAckordDegrees[activeAckordDegrees.length - 1];
                 playGlimmer(lastDeg, stats.g);
             }
