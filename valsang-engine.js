@@ -358,6 +358,8 @@ export const ValsangEngine = (() => {
             rootMidi = newRootMidi; // Glids per automatik på nästa frequency set
         }
 
+        if (key === '\n') key = 'Enter';
+        else if (key === '\b') key = 'Backspace';
         const lowKey = key.toLowerCase();
         const isCapital = (key !== lowKey);
 

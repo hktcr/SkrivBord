@@ -316,6 +316,8 @@ export const SkogsklangEngine = (() => {
         }
 
         if (!key) return;
+        if (key === '\n') key = 'Enter';
+        else if (key === '\b') key = 'Backspace';
         const lowKey = key.toLowerCase();
 
         // 3.4 Basrösten (Context)

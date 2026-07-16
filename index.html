@@ -3182,6 +3182,7 @@
             startZenTimer();
 
             // Initiera Valsång/Vindsus/Skogsklang om det är valt
+            if (window.TextContext) window.TextContext.attach(document.getElementById('fsTextarea'));
             const isContinuousProfile = ['valsang', 'skogsklang'].includes(typewriterSoundProfile);
             if (isContinuousProfile && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
