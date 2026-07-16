@@ -391,7 +391,7 @@ export const VisualsEngine = (() => {
         let needsNextFrame = false;
         
         // Render Mareld
-        if (config.mareldEnabled && mareldCanvas && mareldCtx) {
+        if ((config.mareldEnabled || config.skogstemaMode) && mareldCanvas && mareldCtx) {
             let activeSparks = 0;
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             

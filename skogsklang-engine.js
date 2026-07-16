@@ -201,23 +201,25 @@ export const SkogsklangEngine = (() => {
         if (wetGain) wetGain.gain.setTargetAtTime(0.2 + 0.2 * val, ctx.currentTime, 0.1);
     }
     
-    function playGlimmer(degree) {
+    function playGlimmer(degree, g = 1.0) {
         if (!ctx) return;
-        // Kvint (+7 halvtoner = deg + 4 typ, men vi kör frekvens direkt)
-        const freq = midiToFreq(degreeToMidi(degree, rootMidi) + 7);
+        // Kvint (+7 halvtoner) och en oktav mörkare för mjukare klang
+        const freq = midiToFreq(degreeToMidi(degree, rootMidi) + 7) * 0.5;
         const osc = ctx.createOscillator();
         osc.type = 'sine';
         osc.frequency.value = freq;
         
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.02, ctx.currentTime);
-        gain.gain.setTargetAtTime(0, ctx.currentTime + 0.1, 0.8/3);
+        const maxG = 0.015 * g;
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.setTargetAtTime(maxG, ctx.currentTime, 0.1/3);
+        gain.gain.setTargetAtTime(0, ctx.currentTime + 0.3, 1.2/3);
         
         osc.connect(gain);
         gain.connect(wetGain);
         
         osc.start();
-        osc.stop(ctx.currentTime + 1.0);
+        osc.stop(ctx.currentTime + 2.0);
     }
 
     function getState() {
@@ -350,10 +352,10 @@ export const SkogsklangEngine = (() => {
                     lightChordTone(wordStartIx ?? 14, stats, tempoNorm);
                 }
                 if (sentenceLetters >= 2) {
-                    const maxGain = key === '!' ? 0.094 : 0.084;
+                    const maxGain = key === '!' ? 0.084 : 0.074; // Softer max
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
-                            v.gain.gain.setTargetAtTime(maxGain, ctx.currentTime, 0.8/3);
+                            v.gain.gain.setTargetAtTime(maxGain, ctx.currentTime, 2.0/3); // Slower swell
                         }
                     });
                     
@@ -377,7 +379,7 @@ export const SkogsklangEngine = (() => {
                     const releaseTC = clamp(sentenceChars * 0.05, 2, 10);
                     voices.forEach(v => {
                         if (v.activeDegree !== null) {
-                            v.gain.gain.setTargetAtTime(0, ctx.currentTime + 1.0, releaseTC / 3);
+                            v.gain.gain.setTargetAtTime(0, ctx.currentTime + 1.5, (releaseTC * 2.0) / 3); // Double release
                             v.activeDegree = null; 
                         }
                     });
@@ -410,9 +412,9 @@ export const SkogsklangEngine = (() => {
             sentenceChars++; 
             sentenceLetters++;
             charCounter++;
-            if (charCounter % 4 === 0 && activeAckordDegrees.length > 0) {
+            if (charCounter % 15 === 0 && activeAckordDegrees.length > 0) {
                 const lastDeg = activeAckordDegrees[activeAckordDegrees.length - 1];
-                playGlimmer(lastDeg);
+                playGlimmer(lastDeg, stats.g);
             }
         }
     }
