@@ -206,7 +206,8 @@ export const VisualsEngine = (() => {
                 // assume ~5 chars per word, so if target is words, overage in chars?
                 // The spec says 50 tecken. 
                 // Let's assume the user logic passes the actual metric. We'll use 50 units for simplicity.
-                const written = Math.max(0, (window._charsTotal || 0) - config.mareldStartChars);
+                const totalChars = window.TextContext ? window.TextContext.getStats().N : 0;
+                const written = Math.max(0, totalChars - config.mareldStartChars);
                 const over = written - config.mareldGoalTarget;
                 overage = Math.min(1, Math.max(0, over / 50.0));
             }

@@ -3181,7 +3181,7 @@
             buildOutline();
             startZenTimer();
 
-            // Initiera Valsång/Vindsus/Skogsklang om det är valt
+            // Initiera Valsång/Skogsklang om det är valt
             if (window.TextContext) window.TextContext.attach(document.getElementById('fsTextarea'));
             const isContinuousProfile = ['valsang', 'skogsklang'].includes(typewriterSoundProfile);
             if (isContinuousProfile && typewriterSoundEnabled) {
@@ -3232,7 +3232,7 @@
                     theme: 'dark'
                 });
                 
-                // Bara kör om Valsång, Vindsus eller Skogsklang är valt
+                // Bara kör om Valsång eller Skogsklang är valt
                 if (isContinuousProfile && typewriterSoundEnabled) {
                     window.VisualsEngine.start();
                 }
