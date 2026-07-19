@@ -375,24 +375,32 @@ export const VisualsEngine = (() => {
         s.vx = 0;
         s.vy = 0;
         
+        const stats = window.TextContext && typeof window.TextContext.getStats === 'function' ? window.TextContext.getStats() : { N: 0 };
+        const volumeFactor = Math.min(1.0, stats.N / 10000); // 0.0 at 0 chars, 1.0 at 10k chars
+        s.volumeFactor = volumeFactor;
+
         if (keyType === 'letter') {
-            s.vy = 150 + Math.random() * 150; // Fall down
-            s.maxLife = 0.8 + Math.random() * 1.0;
+            s.vy = 150 + Math.random() * 150 + (volumeFactor * 100); // Fall down faster with volume
+            s.maxLife = 0.8 + Math.random() * 1.0 + (volumeFactor * 0.5); // Live longer with volume
             s.color = '#00FF41'; // Matrix Green
             s.size = 18;
             s.char = String.fromCharCode(0x30A0 + Math.random() * 96);
         } else if (keyType === 'space') {
             // Big flash at bottom
             s.y = window.innerHeight - grid * 2;
-            s.maxLife = 0.3;
+            s.maxLife = 0.3 + (volumeFactor * 0.2);
             s.color = `rgba(255, 100, 200, 0.8)`;
             s.size = grid * 4;
         } else {
-            // Glitch horizontal
-            s.vx = (Math.random() > 0.5 ? 1 : -1) * 800;
-            s.maxLife = 0.2;
+            // Glitch horizontal string
+            s.vx = (Math.random() > 0.5 ? 1 : -1) * (600 + volumeFactor * 400);
+            s.maxLife = 0.4 + (volumeFactor * 0.3); // Live a bit longer to travel across
             s.color = `rgba(100, 255, 255, 0.9)`;
             s.size = grid * 0.4;
+            
+            // Generate matrix string: base length 3-6, plus up to 30 characters based on volume
+            const stringLength = Math.floor(3 + Math.random() * 3 + volumeFactor * 30);
+            s.punctChars = Array.from({length: stringLength}, () => String.fromCharCode(0x30A0 + Math.random() * 96));
         }
         
         s.life = s.maxLife;
@@ -594,8 +602,10 @@ export const VisualsEngine = (() => {
                             
                             // Trail
                             mareldCtx.fillStyle = s.color;
-                            for(let j=1; j<=4; j++) {
-                                const trailAlpha = Math.max(0, alpha - (j * 0.2));
+                            const maxJ = 4 + Math.floor(s.volumeFactor * 10);
+                            for(let j=1; j<=maxJ; j++) {
+                                const dropoff = 0.2 - (s.volumeFactor * 0.15);
+                                const trailAlpha = Math.max(0, alpha - (j * dropoff));
                                 if (trailAlpha > 0) {
                                     mareldCtx.globalAlpha = trailAlpha;
                                     const trailChar = String.fromCharCode(0x30A0 + Math.random() * 96);
@@ -613,10 +623,28 @@ export const VisualsEngine = (() => {
                             mareldCtx.globalAlpha = alpha * 0.3;
                             mareldCtx.fillRect(s.x - s.size/2, s.y, s.size, s.size * 0.2);
                         } else {
-                            // Punctuation glitch line
-                            mareldCtx.fillStyle = '#00FF41';
-                            mareldCtx.globalAlpha = alpha * 0.8;
-                            mareldCtx.fillRect(s.x - s.size * 2.5, s.y, s.size * 5, s.size * 0.2);
+                            // Horizontal matrix string for punctuation
+                            mareldCtx.font = `bold ${s.size * 2}px monospace`;
+                            mareldCtx.textAlign = 'center';
+                            
+                            const chars = s.punctChars || ['/'];
+                            const dir = s.vx > 0 ? -1 : 1; // Tail trails behind movement
+                            
+                            for (let i = 0; i < chars.length; i++) {
+                                // Flicker characters occasionally
+                                if (Math.random() > 0.9) chars[i] = String.fromCharCode(0x30A0 + Math.random() * 96);
+                                
+                                const charAlpha = Math.max(0, alpha - (i * 0.05));
+                                if (charAlpha > 0) {
+                                    if (i === 0) {
+                                        mareldCtx.fillStyle = '#E0FFE0'; // Head
+                                    } else {
+                                        mareldCtx.fillStyle = s.color; // Tail
+                                    }
+                                    mareldCtx.globalAlpha = charAlpha;
+                                    mareldCtx.fillText(chars[i], s.x + (i * s.size * 1.5 * dir), s.y);
+                                }
+                            }
                         }
                         mareldCtx.globalAlpha = 1.0;
                     } else {
