@@ -230,7 +230,7 @@ export const HardForkEngine = (function() {
         osc.stop(time + 0.2);
     }
 
-    function handleKey(key, stats) {
+    function handleChar(key, stats) {
         if (!ctx) return;
         const lowKey = key.toLowerCase();
         const now = ctx.currentTime;
@@ -257,9 +257,11 @@ export const HardForkEngine = (function() {
             // Add a delayed hat for groove if heat is high
             if (typeHeat > 0.4) playHat(nextBeat + SIXTEENTH_DUR * 2);
             addTrace(40, nextBeat);
+            if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('space', 0);
         } else if (/[.,;:!?]/.test(key)) {
             playGlitch(nextBeat);
             addTrace(90, nextBeat);
+            if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('punct', 0);
         } else if (ALPHABET.includes(lowKey)) {
             const idx = ALPHABET.indexOf(lowKey);
             
@@ -284,6 +286,13 @@ export const HardForkEngine = (function() {
             
             // Visuals state
             activeAckordDegrees = [degree]; 
+            if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('letter', degree);
+        }
+    }
+    
+    function handleKey(e) {
+        if (e && e.key) {
+            handleChar(e.key);
         }
     }
 

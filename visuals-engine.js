@@ -369,12 +369,11 @@ export const VisualsEngine = (() => {
         s.vy = 0;
         
         if (keyType === 'letter') {
-            s.vy = -150; // Fly up
-            s.maxLife = 0.5;
-            // Color based on degree (0-13)
-            const hue = (degree * 25) % 360;
-            s.color = `hsl(${hue}, 80%, 60%)`;
-            s.size = grid * 0.8;
+            s.vy = 150 + Math.random() * 150; // Fall down
+            s.maxLife = 0.8 + Math.random() * 1.0;
+            s.color = '#00FF41'; // Matrix Green
+            s.size = 18;
+            s.char = String.fromCharCode(0x30A0 + Math.random() * 96);
         } else if (keyType === 'space') {
             // Big flash at bottom
             s.y = window.innerHeight - grid * 2;
@@ -575,20 +574,37 @@ export const VisualsEngine = (() => {
                         const alpha = s.life / s.maxLife;
                         
                         if (s.keyType === 'letter') {
-                            // Shrink as it fades
-                            const size = s.size * alpha;
+                            // Update character randomly for matrix flicker effect
+                            if (Math.random() > 0.8) s.char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                            
+                            mareldCtx.font = `bold ${s.size}px monospace`;
+                            mareldCtx.textAlign = 'center';
+                            
+                            // Trail
                             mareldCtx.fillStyle = s.color;
+                            for(let j=1; j<=4; j++) {
+                                const trailAlpha = Math.max(0, alpha - (j * 0.2));
+                                if (trailAlpha > 0) {
+                                    mareldCtx.globalAlpha = trailAlpha;
+                                    const trailChar = String.fromCharCode(0x30A0 + Math.random() * 96);
+                                    mareldCtx.fillText(trailChar, s.x, s.y - j * s.size * 0.9);
+                                }
+                            }
+                            
+                            // Leading character (white/bright green)
+                            mareldCtx.fillStyle = '#E0FFE0';
                             mareldCtx.globalAlpha = alpha;
-                            mareldCtx.fillRect(s.x, s.y, size, size);
+                            mareldCtx.fillText(s.char, s.x, s.y);
+                            
                         } else if (s.keyType === 'space') {
-                            mareldCtx.fillStyle = s.color;
-                            mareldCtx.globalAlpha = alpha * 0.5;
+                            mareldCtx.fillStyle = '#00FF41';
+                            mareldCtx.globalAlpha = alpha * 0.3;
                             mareldCtx.fillRect(s.x - s.size/2, s.y, s.size, s.size * 0.2);
                         } else {
                             // Punctuation glitch line
-                            mareldCtx.fillStyle = s.color;
-                            mareldCtx.globalAlpha = alpha;
-                            mareldCtx.fillRect(s.x, s.y, s.size * 5, s.size);
+                            mareldCtx.fillStyle = '#00FF41';
+                            mareldCtx.globalAlpha = alpha * 0.8;
+                            mareldCtx.fillRect(s.x - s.size * 2.5, s.y, s.size * 5, s.size * 0.2);
                         }
                         mareldCtx.globalAlpha = 1.0;
                     } else {
