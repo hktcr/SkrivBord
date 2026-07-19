@@ -364,6 +364,7 @@
             updateStats(doc.content);
             applySettings();
             setViewMode(viewMode);
+            if (window.HardForkEngine && typeof window.HardForkEngine.resetMemory === 'function') window.HardForkEngine.resetMemory();
 
             // Update local file disk connection status indicator
             const statusSaved = document.getElementById('statusSaved');
