@@ -533,10 +533,17 @@ export const HardForkEngine = (function() {
         const now = ctx.currentTime;
         const quantTime = nextNoteTime;
         
-        if (key === '\b') {
-            if (now - lastGlitchTime > 0.25) {
+        if (key === '\b' || key === 'Delete') {
+            if (now - lastGlitchTime > 0.3) {
                 lastGlitchTime = now;
-                playGlitch(quantTime, 0.6);
+                const r = Math.random();
+                if (r > 0.7) {
+                    playGlitch(quantTime, 0.4);
+                } else if (r > 0.3) {
+                    playRiser(quantTime, 0.1, 0.05);
+                } else {
+                    playPluck(quantTime, Math.floor(Math.random() * 5), 0.5, 0.1, 0.6);
+                }
             }
         } else if (key === '\n') {
             typeHeat = Math.min(1.2, typeHeat + 0.1);

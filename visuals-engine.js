@@ -414,8 +414,14 @@ export const VisualsEngine = (() => {
 
     function syncHardForkSentences(text) {
         if (!config.hardforkMode) return;
-        const matches = text.match(/[.!?]+/g);
-        const sentenceCount = matches ? matches.length : 0;
+        const segments = text.split(/[.!?]+/);
+        let sentenceCount = 0;
+        for (let i = 0; i < segments.length - 1; i++) {
+            // Count letters and spaces in the segment, just like hardfork-engine does
+            const len = (segments[i].match(/[a-zåäöA-ZÅÄÖ0-9 ]/g) || []).length;
+            if (len >= 2) sentenceCount++;
+        }
+        
         if (hardForkSentences.length > sentenceCount) {
             hardForkSentences.length = sentenceCount; // truncate
             startLoop();
