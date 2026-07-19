@@ -256,13 +256,13 @@ export const HardForkEngine = (function() {
         osc1.onended = () => { try { filter.disconnect(); gain.disconnect(); osc2Gain.disconnect(); } catch(e){} };
     }
 
-    function playHat(time, pan = 0, isOpen = false) {
+    function playHat(time, pan = 0, isOpen = false, volMod = 1.0) {
         const source = ctx.createBufferSource(); source.buffer = noiseBuffer;
         const filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 5000;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.05, time + 0.01);
+        gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.05 * volMod, time + 0.01);
         const dur = isOpen ? 0.2 : 0.05;
-        gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
         
         const panner = ctx.createStereoPanner(); panner.pan.value = pan;
         source.connect(filter); filter.connect(gain); gain.connect(panner); panner.connect(synthBus);
@@ -422,33 +422,38 @@ export const HardForkEngine = (function() {
         
         // Layer 0: Bass
         if (step === 0 || step === 3 || step === 8 || step === 11) {
-            playBass(time, false);
+            if (step === 0 || step === 8 || effectiveHeat > 0.1) playBass(time, false);
             if (effectiveHeat > 0.95 && (step === 3 || step === 11)) playBass(time, true);
         }
         
         // Layer 1: Kick
-        if (effectiveHeat > 0.25 && (step === 0 || step === 4 || step === 8 || step === 12)) {
+        // Spela alltid baskagge på slag 1 och 3 (step 0 och 8) för hjärtslag, fyll i slag 2 och 4 när heat ökar
+        if (step === 0 || step === 8 || (effectiveHeat > 0.25 && (step === 4 || step === 12))) {
             playKick(time);
         }
         
         // Layer 2: Hats
-        if (effectiveHeat > 0.5 && (step === 2 || step === 6 || step === 10 || step === 14)) {
+        // Spela alltid hi-hat på 2 och 10 (offbeat) svagt, fyll i mer vid mer heat
+        if (step === 2 || step === 10 || (effectiveHeat > 0.2 && (step === 6 || step === 14))) {
             const isOpen = (effectiveHeat > 0.95 && step === 14);
             const pan = step % 4 === 2 ? -0.3 : 0.3;
-            playHat(time, pan, isOpen);
+            const volMod = effectiveHeat < 0.2 ? 0.3 : 1.0;
+            playHat(time, pan, isOpen, volMod);
         }
 
         // Layer 2b: Ostinato (Sentence Memory)
-        if (effectiveHeat > 0.5 && step % 2 === 0) {
+        // Spela ostinatot svagt i bakgrunden även när man pausar
+        if (step % 2 === 0) {
             let od = Math.round(M[step / 2]);
             if (step % 4 === 0) od = snapToChord(od);
-            playPluck(time, od, 0.5, 0.12, 0.5); // background layer
+            const ostinatoVol = Math.max(0.15, effectiveHeat * 0.5);
+            playPluck(time, od, ostinatoVol, 0.12, 0.5); // background layer
         }
         
         // Layer 3: Snare & extra hats
-        if (effectiveHeat > 0.75) {
+        if (effectiveHeat > 0.6) {
             if (step === 4 || step === 12) playSnare(time);
-            if (step % 2 !== 0 && prng() < 0.4 && step !== 14) playHat(time, 0, false);
+            if (step % 2 !== 0 && prng() < 0.4 && step !== 14) playHat(time, 0, false, 0.8);
         }
         
         // Fill logic (B4)
