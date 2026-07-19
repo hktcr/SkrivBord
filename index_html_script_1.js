@@ -1235,20 +1235,27 @@
                             filterFreq = 2500; filterQ = 1.0;
                         }
                     } else if (typewriterSoundProfile === 'vintage') {
-                        // Vintage, tung skrivmaskin
-                        osc.type = isEnter ? 'triangle' : 'sawtooth';
+                        // Vintage, tung skrivmaskin med klocka på enter
+                        osc.type = isEnter ? 'sine' : (isBackspace ? 'triangle' : 'square');
                         if (isEnter) {
-                            frequency = 2000; rampToFreq = 1500;
-                            gainVol = 0.7; rampToGain = 0.01; duration = 0.6;
-                            filterFreq = 2500; filterQ = 5.0;
+                            // "Ding!"-ljudet
+                            frequency = 1600; rampToFreq = 1600;
+                            gainVol = 0.6; rampToGain = 0.01; duration = 0.8;
+                            filterFreq = 3000; filterQ = 1.0;
                         } else if (isBackspace) {
-                            frequency = 80; rampToFreq = 30;
-                            gainVol = 0.7; rampToGain = 0.01; duration = 0.12;
+                            // Tungt mekaniskt klonk
+                            frequency = 250; rampToFreq = 40;
+                            gainVol = 0.8; rampToGain = 0.01; duration = 0.1;
                             filterFreq = 500; filterQ = 0.5;
+                        } else if (isSpace) {
+                            frequency = 300; rampToFreq = 50;
+                            gainVol = 0.4; rampToGain = 0.01; duration = 0.05;
+                            filterFreq = 600; filterQ = 1.0;
                         } else {
-                            frequency = 120 + Math.random() * 40; rampToFreq = 40;
-                            gainVol = 0.9; rampToGain = 0.01; duration = 0.08;
-                            filterFreq = 800; filterQ = 0.5;
+                            // Tung, smutsig tangentnedslag (rapid drop)
+                            frequency = 600 + Math.random() * 200; rampToFreq = 50;
+                            gainVol = 0.9; rampToGain = 0.01; duration = 0.06;
+                            filterFreq = 1000; filterQ = 0.5;
                         }
                     } else {
                         // Original digital
