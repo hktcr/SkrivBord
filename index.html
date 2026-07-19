@@ -1122,7 +1122,13 @@
         }
 
         .fullscreen-overlay.fs-light-mode {
-            background: #fdfdfd;
+            background: #fdfdfd !important;
+        }
+
+        .fullscreen-overlay.fs-light-mode #djupvattenContainer,
+        .fullscreen-overlay.fs-light-mode #mareldVeil,
+        .fullscreen-overlay.fs-light-mode canvas {
+            display: none !important;
         }
 
         .fullscreen-overlay.bg-image {
