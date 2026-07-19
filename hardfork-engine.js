@@ -323,6 +323,7 @@ export const HardForkEngine = (function() {
         setDepth,
         destroy,
         handleKey,
+        handleChar,
         getState,
         onSentence
     };

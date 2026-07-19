@@ -97,8 +97,8 @@ export const VisualsEngine = (() => {
     function setConfig(newConfig) {
         config = { ...config, ...newConfig };
         
-        // Vindsus-läget tvingar bort havstemat
-        if (config.skogstemaMode) {
+        // Vindsus-läget och HardFork tvingar bort havstemat
+        if (config.skogstemaMode || config.hardforkMode) {
             config.djupvattenEnabled = false;
             if (config.sonogramEnabled) {
                 config.sonogramEnabled = false;
