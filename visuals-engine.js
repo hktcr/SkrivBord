@@ -32,6 +32,7 @@ export const VisualsEngine = (() => {
     let traceHead = 0;
     
     const sparks = new Array(120).fill(null).map(() => ({ active: false }));
+    const hardForkSentences = [];
     
     let isLoopRunning = false;
     let rAFId = null;
@@ -407,6 +408,58 @@ export const VisualsEngine = (() => {
         startLoop();
     }
     
+    function resetHardForkSentences() {
+        hardForkSentences.length = 0;
+    }
+
+    function addHardForkSentence(length) {
+        if (!config.hardforkMode) return;
+        
+        // Base size 12px, scaling up to 40px for very long sentences
+        const size = Math.min(40, 12 + length * 0.14);
+        
+        const padding = 10;
+        let x = 30; // Starting x
+        let y = 30 + size; // Starting y
+        
+        // Find the lowest y in the rightmost column
+        if (hardForkSentences.length > 0) {
+            let maxColX = 30;
+            for (const item of hardForkSentences) {
+                if (item.x > maxColX) maxColX = item.x;
+            }
+            
+            // Find lowest y and max width in that column
+            let maxY = 0;
+            let maxWidthInCol = 0;
+            for (const item of hardForkSentences) {
+                if (item.x === maxColX) {
+                    if (item.y > maxY) maxY = item.y;
+                    if (item.size > maxWidthInCol) maxWidthInCol = item.size;
+                }
+            }
+            
+            x = maxColX;
+            y = maxY + size + padding;
+            
+            // If column is full, move to next column
+            if (y > window.innerHeight - 50) {
+                x = maxColX + maxWidthInCol + padding + 10;
+                y = 30 + size;
+            }
+        }
+        
+        hardForkSentences.push({
+            char: String.fromCharCode(0x30A0 + Math.random() * 96),
+            size: size,
+            x: x,
+            y: y,
+            born: performance.now()
+        });
+        
+        startLoop();
+    }
+    
     function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -684,6 +737,34 @@ export const VisualsEngine = (() => {
                 }
             }
             if (activeSparks > 0 || config.skogstemaMode) needsNextFrame = true;
+            
+            if (config.hardforkMode && hardForkSentences.length > 0) {
+                const now = performance.now();
+                mareldCtx.textAlign = 'center';
+                for (const item of hardForkSentences) {
+                    // Random flicker
+                    if (Math.random() > 0.99) item.char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                    
+                    // Breathing glow
+                    const age = (now - item.born) / 1000;
+                    const breath = Math.sin(now / 1000 + item.x) * 0.2 + 0.8;
+                    
+                    mareldCtx.font = `bold ${item.size}px monospace`;
+                    
+                    // Flash bright green when just born
+                    if (age < 0.5) {
+                        mareldCtx.fillStyle = '#E0FFE0';
+                        mareldCtx.globalAlpha = 1.0;
+                    } else {
+                        mareldCtx.fillStyle = '#00FF41';
+                        mareldCtx.globalAlpha = 0.3 * breath;
+                    }
+                    
+                    mareldCtx.fillText(item.char, item.x, item.y);
+                }
+                mareldCtx.globalAlpha = 1.0;
+                needsNextFrame = true; // Always animating breathing
+            }
         }
 
         // Render Sonogram
@@ -771,6 +852,8 @@ export const VisualsEngine = (() => {
         triggerDive,
         spawnSentenceFirefly,
         spawnHardForkBlock,
+        addHardForkSentence,
+        resetHardForkSentences,
         stop,
         start,
         setStateProvider

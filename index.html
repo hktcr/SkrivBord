@@ -1792,7 +1792,7 @@
 
     <!-- TOOLBAR -->
     <div class="toolbar">
-        <div class="toolbar-brand">✏️ Skrivr v5.12</div>
+        <div class="toolbar-brand">✏️ Skrivr v5.12.2</div>
         
         <button class="mobile-menu-btn tooltip-wrap" data-tip="Meny" onclick="toggleMobileMenu()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -2551,6 +2551,7 @@
             applySettings();
             setViewMode(viewMode);
             if (window.HardForkEngine && typeof window.HardForkEngine.resetMemory === 'function') window.HardForkEngine.resetMemory();
+            if (window.VisualsEngine && typeof window.VisualsEngine.resetHardForkSentences === 'function') window.VisualsEngine.resetHardForkSentences();
 
             // Update local file disk connection status indicator
             const statusSaved = document.getElementById('statusSaved');
@@ -3210,7 +3211,10 @@
                     window.HardForkEngine.init(audioCtx);
                     window.HardForkEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
                     window.HardForkEngine.onSentence((info) => {
-                        if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('punct', Math.min(9, Math.round(info.length / 15)));
+                        if (window.VisualsEngine) {
+                            window.VisualsEngine.spawnHardForkBlock('punct', Math.min(9, Math.round(info.length / 15)));
+                            if (typeof window.VisualsEngine.addHardForkSentence === 'function') window.VisualsEngine.addHardForkSentence(info.length);
+                        }
                     });
                 }
             }
@@ -3842,7 +3846,10 @@
                 } else if (settings.typewriterSoundProfile === 'hardfork' && window.HardForkEngine) {
                     window.HardForkEngine.init(audioCtx);
                     window.HardForkEngine.onSentence((info) => {
-                        if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('punct', Math.min(9, Math.round(info.length / 15)));
+                        if (window.VisualsEngine) {
+                            window.VisualsEngine.spawnHardForkBlock('punct', Math.min(9, Math.round(info.length / 15)));
+                            if (typeof window.VisualsEngine.addHardForkSentence === 'function') window.VisualsEngine.addHardForkSentence(info.length);
+                        }
                     });
                 }
                 
