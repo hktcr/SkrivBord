@@ -22,7 +22,8 @@ export const VisualsEngine = (() => {
         skogstemaMode: false,
         fireflyMode: 'sentence', // 'sentence', 'goal', 'off'
         goalProgress: 0,
-        prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        hardforkMode: false
     };
 
     // Data structures
@@ -340,6 +341,58 @@ export const VisualsEngine = (() => {
         startLoop();
     }
     
+    function spawnHardForkBlock(keyType, degree) {
+        if (!config.hardforkMode) return;
+        
+        let targetIdx = sparks.findIndex(s => !s.active);
+        if (targetIdx === -1) {
+            let oldestLife = Infinity;
+            for (let i = 0; i < sparks.length; i++) {
+                if (sparks[i].life < oldestLife) {
+                    oldestLife = sparks[i].life;
+                    targetIdx = i;
+                }
+            }
+        }
+        
+        const s = sparks[targetIdx];
+        s.active = true;
+        s.type = 'hardfork';
+        s.keyType = keyType; // 'letter', 'space', 'punct'
+        
+        // Random position, maybe snapping to a grid
+        const grid = 40;
+        s.x = Math.floor((Math.random() * window.innerWidth) / grid) * grid;
+        s.y = Math.floor((Math.random() * window.innerHeight) / grid) * grid;
+        
+        s.vx = 0;
+        s.vy = 0;
+        
+        if (keyType === 'letter') {
+            s.vy = -150; // Fly up
+            s.maxLife = 0.5;
+            // Color based on degree (0-13)
+            const hue = (degree * 25) % 360;
+            s.color = `hsl(${hue}, 80%, 60%)`;
+            s.size = grid * 0.8;
+        } else if (keyType === 'space') {
+            // Big flash at bottom
+            s.y = window.innerHeight - grid * 2;
+            s.maxLife = 0.3;
+            s.color = `rgba(255, 100, 200, 0.8)`;
+            s.size = grid * 4;
+        } else {
+            // Glitch horizontal
+            s.vx = (Math.random() > 0.5 ? 1 : -1) * 800;
+            s.maxLife = 0.2;
+            s.color = `rgba(100, 255, 255, 0.9)`;
+            s.size = grid * 0.4;
+        }
+        
+        s.life = s.maxLife;
+        startLoop();
+    }
+    
     function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -413,8 +466,8 @@ export const VisualsEngine = (() => {
         
         let needsNextFrame = false;
         
-        // Render Mareld
-        if ((config.mareldEnabled || config.skogstemaMode) && mareldCanvas && mareldCtx) {
+        // Render Mareld & HardFork
+        if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode) && mareldCanvas && mareldCtx) {
             let activeSparks = 0;
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
@@ -509,6 +562,35 @@ export const VisualsEngine = (() => {
                         
                         s.life -= dt;
                         
+                    } else if (s.type === 'hardfork') {
+                        s.life -= dt;
+                        if (s.life <= 0) {
+                            s.active = false;
+                            continue;
+                        }
+                        
+                        s.x += s.vx * dt;
+                        s.y += s.vy * dt;
+                        
+                        const alpha = s.life / s.maxLife;
+                        
+                        if (s.keyType === 'letter') {
+                            // Shrink as it fades
+                            const size = s.size * alpha;
+                            mareldCtx.fillStyle = s.color;
+                            mareldCtx.globalAlpha = alpha;
+                            mareldCtx.fillRect(s.x, s.y, size, size);
+                        } else if (s.keyType === 'space') {
+                            mareldCtx.fillStyle = s.color;
+                            mareldCtx.globalAlpha = alpha * 0.5;
+                            mareldCtx.fillRect(s.x - s.size/2, s.y, s.size, s.size * 0.2);
+                        } else {
+                            // Punctuation glitch line
+                            mareldCtx.fillStyle = s.color;
+                            mareldCtx.globalAlpha = alpha;
+                            mareldCtx.fillRect(s.x, s.y, s.size * 5, s.size);
+                        }
+                        mareldCtx.globalAlpha = 1.0;
                     } else {
                         // Old Mareld/Goal spark
                         s.x += s.vx * dt;
@@ -632,6 +714,7 @@ export const VisualsEngine = (() => {
         handleKey,
         triggerDive,
         spawnSentenceFirefly,
+        spawnHardForkBlock,
         stop,
         start,
         setStateProvider
