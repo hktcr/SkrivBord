@@ -270,7 +270,10 @@ export const VisualsEngine = (() => {
     }
 
     function spawnSentenceFirefly(length) {
-        if (!config.skogstemaMode || (config.fireflyMode && config.fireflyMode !== 'sentence')) return;
+        if (!config.skogstemaMode || (config.fireflyMode && config.fireflyMode !== 'sentence')) {
+            console.log('[Eldfluga] BLOCKERAD:', { skogstema: config.skogstemaMode, fireflyMode: config.fireflyMode });
+            return;
+        }
         
         // Mappning enligt spec: kort mening = avlägsen, lång = nära
         const norm = clamp((length - 15) / (150 - 15), 0, 1);
@@ -329,6 +332,10 @@ export const VisualsEngine = (() => {
         s.maxLife = Infinity; // Lever tills poolen tvingar bort den
         s.life = 1000;
         s.born = performance.now();
+        
+        // Debug: räkna aktiva eldflugor
+        const activeCount = sparks.filter(sp => sp.active && sp.type === 'sentence').length;
+        console.log(`[Eldfluga] Spawnad #${activeCount} vid (${Math.round(s.x)}, ${Math.round(s.y)}), norm=${norm.toFixed(2)}, length=${length}`);
         
         startLoop();
     }
@@ -538,7 +545,7 @@ export const VisualsEngine = (() => {
                     }
                 }
             }
-            if (activeSparks > 0 || (config.skogstemaMode && config.goalProgress > 0)) needsNextFrame = true;
+            if (activeSparks > 0 || config.skogstemaMode) needsNextFrame = true;
         }
 
         // Render Sonogram
