@@ -412,6 +412,16 @@ export const VisualsEngine = (() => {
         hardForkSentences.length = 0;
     }
 
+    function syncHardForkSentences(text) {
+        if (!config.hardforkMode) return;
+        const matches = text.match(/[.!?]+/g);
+        const sentenceCount = matches ? matches.length : 0;
+        if (hardForkSentences.length > sentenceCount) {
+            hardForkSentences.length = sentenceCount; // truncate
+            startLoop();
+        }
+    }
+
     function addHardForkSentence(length) {
         if (!config.hardforkMode) return;
         
@@ -853,6 +863,7 @@ export const VisualsEngine = (() => {
         spawnSentenceFirefly,
         spawnHardForkBlock,
         addHardForkSentence,
+        syncHardForkSentences,
         resetHardForkSentences,
         stop,
         start,

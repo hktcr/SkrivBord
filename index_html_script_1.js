@@ -583,6 +583,10 @@
             document.getElementById('statusChars').textContent = `${chars} tecken`;
             document.getElementById('statusWords').textContent = `${words} ord`;
             document.getElementById('statusLines').textContent = `${lines} rader`;
+            
+            if (window.VisualsEngine && typeof window.VisualsEngine.syncHardForkSentences === 'function') {
+                window.VisualsEngine.syncHardForkSentences(content);
+            }
         }
 
         function updateDocCount() {
