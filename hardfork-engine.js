@@ -100,11 +100,12 @@ export const HardForkEngine = (function() {
     function destroy() {
         if (heatInterval) clearInterval(heatInterval);
         if (masterGain) {
-            masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+            const oldGain = masterGain;
+            oldGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
             setTimeout(() => {
-                masterGain.disconnect();
-                masterGain = null;
+                try { oldGain.disconnect(); } catch(e) {}
             }, 200);
+            masterGain = null;
         }
     }
     

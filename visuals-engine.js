@@ -100,6 +100,13 @@ export const VisualsEngine = (() => {
         // Vindsus-läget och HardFork tvingar bort havstemat
         if (config.skogstemaMode || config.hardforkMode) {
             config.djupvattenEnabled = false;
+            config.mareldEnabled = false;
+            
+            // Force hide DOM layers
+            djupvattenLayers.forEach(l => { if (l) l.style.opacity = '0'; });
+            const mareldVeil = document.getElementById('mareldVeil');
+            if (mareldVeil) mareldVeil.style.opacity = '0';
+            
             if (config.sonogramEnabled) {
                 config.sonogramEnabled = false;
                 if (sonogramCanvas && sonoCtx) {
@@ -396,7 +403,12 @@ export const VisualsEngine = (() => {
     function lerp(a, b, t) { return a + (b - a) * t; }
 
     function updateDjupvatten() {
-        if (!config.djupvattenEnabled || config.prefersReducedMotion || !getValsangState) return;
+        if (!config.djupvattenEnabled || config.prefersReducedMotion || !getValsangState) {
+            djupvattenLayers.forEach(l => {
+                if (l) l.style.opacity = '0';
+            });
+            return;
+        }
         const state = getValsangState();
         
         // Layer 0: Ytljus (Pitch)
