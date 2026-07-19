@@ -380,7 +380,22 @@ export const HardForkEngine = (function() {
         
         if (step === 0) {
             const stats = getStats();
-            prng = mulberry32(stats.paragraphs * 1000 + barNumber);
+            
+            // 1. Skapa en unik "fingeravtrycks-seed" baserad på dokumentets titel
+            let docSeed = 0;
+            if (typeof window.getActiveDoc === 'function') {
+                const doc = window.getActiveDoc();
+                if (doc && doc.title) {
+                    for(let i = 0; i < doc.title.length; i++) {
+                        docSeed += doc.title.charCodeAt(i) * Math.pow(7, i % 5);
+                    }
+                }
+            }
+            
+            // 2. Låt groovet utvecklas beroende på ordmängd (ändrar mönster var 30:e ord)
+            const wordEvolSeed = Math.floor(stats.words / 30) * 113;
+            
+            prng = mulberry32(Math.floor(docSeed) + wordEvolSeed + stats.paragraphs * 1000 + barNumber);
             
             const prog = (stats.vowelRatio > 0.42) ? [0, -2, -4, -5] : [0, -4, 3, -2];
             currentChordOffset = prog[barNumber % 4];
