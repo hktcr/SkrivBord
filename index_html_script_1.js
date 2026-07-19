@@ -1482,6 +1482,24 @@
             updateLineHighlight(false);
         }
 
+        let isGlobalMuted = false;
+        function toggleMute() {
+            isGlobalMuted = !isGlobalMuted;
+            const btnFsMute = document.getElementById('btnFsMute');
+            if (isGlobalMuted) {
+                if (btnFsMute) btnFsMute.textContent = '🔈 Muted';
+                if (window.ValsangEngine && typeof window.ValsangEngine.setVolume === 'function') window.ValsangEngine.setVolume(0);
+                if (window.SkogsklangEngine && typeof window.SkogsklangEngine.setVolume === 'function') window.SkogsklangEngine.setVolume(0);
+                if (window.HardForkEngine && typeof window.HardForkEngine.setVolume === 'function') window.HardForkEngine.setVolume(0);
+            } else {
+                if (btnFsMute) btnFsMute.textContent = '🔊 Mute';
+                const vol = settings.valsangVol !== undefined ? settings.valsangVol : 0.6;
+                if (window.ValsangEngine && typeof window.ValsangEngine.setVolume === 'function') window.ValsangEngine.setVolume(vol);
+                if (window.SkogsklangEngine && typeof window.SkogsklangEngine.setVolume === 'function') window.SkogsklangEngine.setVolume(vol);
+                if (window.HardForkEngine && typeof window.HardForkEngine.setVolume === 'function') window.HardForkEngine.setVolume(vol);
+            }
+        }
+
         function setFsZone(val) {
             document.getElementById('fsZoneValue').textContent = val + ' Rader';
             const settings = loadSettings();
