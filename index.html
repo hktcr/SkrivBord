@@ -1118,6 +1118,11 @@
             z-index: 1000;
             flex-direction: column;
             background: radial-gradient(circle at center, #2d3630 0%, #1c211d 100%);
+            transition: background 0.3s ease;
+        }
+
+        .fullscreen-overlay.fs-light-mode {
+            background: #fdfdfd;
         }
 
         .fullscreen-overlay.bg-image {
@@ -1427,6 +1432,12 @@
             caret-color: var(--accent-light);
             overflow-y: scroll;
             scrollbar-width: none;
+            transition: color 0.3s ease;
+        }
+
+        .fullscreen-overlay.fs-light-mode .fs-textarea {
+            color: #1a1a1a;
+            caret-color: #1a1a1a;
         }
 
         .fs-textarea::-webkit-scrollbar {
@@ -2015,6 +2026,7 @@
                 <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: auto; max-width: 300px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
                     <option value="digital">Digital (Lätt)</option>
                     <option value="mechanical">Mekanisk (Klassisk)</option>
+                    <option value="electric">Elektrisk (Snabb & Rapp)</option>
                     <option value="vintage">Vintage (Tung)</option>
                     <option value="valsang">Valsång (Kontinuerlig)</option>
                     <option value="skogsklang">Skogsklang (Harmoniskt & Eldflugor)</option>
@@ -2122,6 +2134,7 @@
             <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
                 <button class="fs-btn tooltip-wrap" style="color:var(--text-dim);" data-tip="Kortkommandon" onclick="openShortcuts()">⌨️</button>
+                <button class="fs-btn tooltip-wrap" id="btnFsTheme" data-tip="Byt ljust/mörkt tema" onclick="toggleFsTheme()">🌓 Tema</button>
                 <button class="fs-btn tooltip-wrap" id="btnFsMute" data-tip="Stäng av/sätt på skrivljud" onclick="toggleMute()">🔊 Mute</button>
                 <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()">☰ Outline</button>
                 <div class="fs-dropdown" id="fsSettingsDropdown">

@@ -1214,21 +1214,41 @@
                             gainVol = 0.6; rampToGain = 0.01; duration = 0.05;
                             filterFreq = 1500; filterQ = 2.0;
                         }
+                    } else if (typewriterSoundProfile === 'electric') {
+                        // Elektrisk skrivmaskin (snabbare, rappare, modernare)
+                        osc.type = isEnter ? 'sawtooth' : 'triangle';
+                        if (isEnter) {
+                            frequency = 600; rampToFreq = 100;
+                            gainVol = 0.5; rampToGain = 0.01; duration = 0.2;
+                            filterFreq = 1500; filterQ = 1.0;
+                        } else if (isBackspace) {
+                            frequency = 300; rampToFreq = 100;
+                            gainVol = 0.5; rampToGain = 0.01; duration = 0.05;
+                            filterFreq = 2000; filterQ = 1.0;
+                        } else if (isSpace) {
+                            frequency = 150; rampToFreq = 50;
+                            gainVol = 0.2; rampToGain = 0.01; duration = 0.04;
+                            filterFreq = 1000; filterQ = 1.0;
+                        } else {
+                            frequency = 800 + Math.random() * 200; rampToFreq = 200;
+                            gainVol = 0.7; rampToGain = 0.01; duration = 0.03;
+                            filterFreq = 2500; filterQ = 1.0;
+                        }
                     } else if (typewriterSoundProfile === 'vintage') {
                         // Vintage, tung skrivmaskin
                         osc.type = isEnter ? 'triangle' : 'sawtooth';
                         if (isEnter) {
-                            frequency = 2500; rampToFreq = 2000;
-                            gainVol = 0.6; rampToGain = 0.01; duration = 0.5;
-                            filterFreq = 3000; filterQ = 5.0;
+                            frequency = 2000; rampToFreq = 1500;
+                            gainVol = 0.7; rampToGain = 0.01; duration = 0.6;
+                            filterFreq = 2500; filterQ = 5.0;
                         } else if (isBackspace) {
                             frequency = 80; rampToFreq = 30;
-                            gainVol = 0.6; rampToGain = 0.01; duration = 0.1;
+                            gainVol = 0.7; rampToGain = 0.01; duration = 0.12;
                             filterFreq = 500; filterQ = 0.5;
                         } else {
-                            frequency = 150 + Math.random() * 50; rampToFreq = 40;
-                            gainVol = 0.8; rampToGain = 0.01; duration = 0.06;
-                            filterFreq = 1000; filterQ = 0.5;
+                            frequency = 120 + Math.random() * 40; rampToFreq = 40;
+                            gainVol = 0.9; rampToGain = 0.01; duration = 0.08;
+                            filterFreq = 800; filterQ = 0.5;
                         }
                     } else {
                         // Original digital
@@ -1550,6 +1570,13 @@
             const panel = document.getElementById('fsOutline');
             panel.classList.toggle('open');
             if (panel.classList.contains('open')) buildOutline();
+        }
+
+        function toggleFsTheme() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.toggle('fs-light-mode');
+            const isLight = overlay.classList.contains('fs-light-mode');
+            localStorage.setItem('gaia_fs_light_mode', isLight ? 'true' : 'false');
         }
 
         function buildOutline() {
@@ -2130,6 +2157,9 @@
         // ═══════════════════════════════════════════════
 
         (function init() {
+            if (localStorage.getItem('gaia_fs_light_mode') === 'true') {
+                document.getElementById('fullscreenOverlay').classList.add('fs-light-mode');
+            }
             loadDocs();
             activeDocId = localStorage.getItem(ACTIVE_KEY) || null;
 
