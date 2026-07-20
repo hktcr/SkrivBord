@@ -1741,6 +1741,57 @@
                 width: 140px;
             }
         }
+        /* ── MISSING LAYOUT RESTORATION ── */
+        .fs-zone-control {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 0.8rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--surface-hover);
+            border-radius: var(--radius);
+            padding: 2px;
+        }
+        .view-toggle .btn {
+            border: none !important;
+            background: transparent !important;
+            color: var(--text-muted) !important;
+            border-radius: 4px;
+        }
+        .view-toggle .btn.active {
+            background: var(--surface-active) !important;
+            color: var(--text-bright) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .view-toggle .btn:hover:not(.active) {
+            color: var(--text) !important;
+        }
+
+        .timer-popover .btn {
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+
+        .empty-state .btn {
+            margin-top: 15px;
+        }
+
+        .confirm-dialog .btn, .settings-modal .btn {
+            margin-left: 8px;
+        }
+        .confirm-dialog .actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 
@@ -2125,7 +2176,7 @@
                         <div class="fs-dropdown-item" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px;">
                             <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Dimma: Av</button>
                         </div>
-                        <div class="fs-dropdown-item focus-dim-item" id="focusDimItem" style="display:none; padding-top:0;">
+                        <div class="fs-dropdown-item focus-dim-item" id="focusDimItem" style="display:none; padding-top:10px; margin-top:10px; border-top:1px solid var(--border);">
                             <label>Ljusstyrka i dimma</label>
                             <input type="range" class="fs-width-slider" id="fsDimSlider" min="10" max="100" value="30" oninput="setFocusDim(this.value)">
                             <span class="fs-width-value" id="fsDimValue">30%</span>
