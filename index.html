@@ -17,25 +17,58 @@
         }
 
         :root {
-            --app-bg: #1a1b1e;
-            --surface: #25262b;
-            --surface-hover: #2c2e33;
-            --surface-active: #373a40;
-            --border: #373a40;
-            --border-light: #2c2e33;
-            --text: #c1c2c5;
-            --text-bright: #e9ecef;
-            --text-muted: #909296;
-            --accent: #7c5cbf;
-            --accent-light: #9775d0;
-            --accent-glow: rgba(124, 92, 191, 0.15);
-            --danger: #e03131;
-            --success: #40c057;
-            --radius: 8px;
+            /* Sot (bakgrunder, varm mörk skala i stället för neutralgrå) */
+            --app-bg:        #171614;
+            --surface:       #201f1c;
+            --surface-hover: #282722;
+            --surface-active:#302e29;
+            --border:        #383630;
+            --border-light:  #2b2a25;
+
+            /* Papper (text) */
+            --text:        #cfccc3;
+            --text-bright: #f0eee6;
+            --text-muted:  #928f87;
+
+            /* Mässing (enda accent; ersätter lila överallt) */
+            --accent:       #c99a3f;
+            --accent-light: #ddb35e;
+            --accent-ink:   #1d1608;                 
+            --accent-glow:  rgba(201, 154, 63, 0.16);
+
+            --danger:  #e5484d;
+            --success: #4cc38a;
+
+            /* Radieskala (exakt tre värden, inga andra får förekomma) */
+            --r-sm: 6px;    /* knappar, inputs, selects, chips */
+            --r-md: 10px;   /* popovers, kort, paneler */
+            --r-lg: 14px;   /* modaler */
+
+            /* Typskala (exakt fem steg) */
+            --fs-xs: 0.75rem;     /* etiketter, statusrad */
+            --fs-sm: 0.8125rem;   /* knappar, menyer, brödtext i UI */
+            --fs-md: 0.875rem;    /* inputvärden, listor */
+            --fs-lg: 1rem;        /* panelrubriker */
+            --fs-xl: 1.25rem;     /* modalrubriker, tomlägen */
+
+            /* Rytm (4px-bas) */
+            --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+
+            /* Elevation (exakt två nivåer) */
+            --shadow-1: 0 2px 8px rgba(0,0,0,0.35);
+            --shadow-2: 0 16px 40px rgba(0,0,0,0.5);
+
+            --transition: 0.15s ease;
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             --font-serif: 'Merriweather', Georgia, serif;
             --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            --transition: 0.15s ease;
+        }
+
+        :focus { outline: none; }
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: inherit;
         }
 
         html, body {
@@ -111,41 +144,33 @@
             color: var(--text-bright);
         }
 
-        .tb-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text);
-            font-family: inherit;
-            font-size: 0.73rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition);
-            white-space: nowrap;
+        /* ── BUTTON SYSTEM ── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+            padding: 6px 14px;
+            border-radius: var(--r-sm);
+            font-family: inherit; font-size: var(--fs-sm); font-weight: 500;
+            line-height: 1.2; cursor: pointer; user-select: none;
+            border: 1px solid transparent;
+            transition: background var(--transition), border-color var(--transition),
+                        color var(--transition), transform var(--transition);
         }
+        .btn:active { transform: translateY(1px); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
-        .tb-btn:hover {
-            background: var(--surface-hover);
-            border-color: var(--text-muted);
-            color: var(--text-bright);
-        }
+        .btn-primary { background: var(--accent); color: var(--accent-ink); }
+        .btn-primary:hover { background: var(--accent-light); }
 
-        .tb-btn.accent {
-            border-color: var(--accent);
-            color: var(--accent-light);
-        }
+        .btn-secondary { background: var(--surface); border-color: var(--border); color: var(--text); }
+        .btn-secondary:hover { background: var(--surface-hover); color: var(--text-bright); }
 
-        .tb-btn.accent:hover {
-            background: var(--accent-glow);
-        }
+        .btn-ghost { background: transparent; color: var(--text-muted); }
+        .btn-ghost:hover { background: var(--surface-hover); color: var(--text-bright); }
 
-        .tb-btn .icon {
-            font-size: 0.85rem;
-        }
+        .btn-danger { background: transparent; border-color: var(--border); color: var(--text-muted); }
+        .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+
+        .btn-sm { padding: 4px 10px; font-size: var(--fs-xs); }
 
         .toolbar-spacer {
             flex: 1;
@@ -497,8 +522,6 @@
             padding: 0.5em 0.8em;
             text-align: left;
             font-size: 0.9rem;
-        }
-
         .preview-content th {
             background: var(--surface);
             font-weight: 600;
@@ -510,11 +533,12 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(10, 9, 7, 0.6);
+            backdrop-filter: blur(2px);
             z-index: 200;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.15s ease;
+            animation: fadeIn 0.2s ease;
         }
 
         .settings-overlay.visible {
@@ -529,11 +553,11 @@
         .settings-panel {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: var(--r-lg);
             padding: 24px 28px;
             width: 820px;
             max-width: 95vw;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--shadow-2);
             animation: slideUp 0.2s ease;
         }
 
@@ -615,58 +639,11 @@
             transition: all var(--transition);
         }
 
-        .btn-reset {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-        }
-
-        .btn-reset:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .btn-close-settings {
-            background: var(--accent);
-            border: none;
-            color: #fff;
-        }
-
-        .btn-close-settings:hover {
-            background: var(--accent-light);
-        }
-
         /* ── VIEW MODE TOGGLE ── */
         .view-toggle {
             display: inline-flex;
             border: 1px solid var(--border);
-            border-radius: 6px;
-        }
-
-        .view-toggle button {
-            padding: 4px 8px;
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 0.7rem;
-            font-family: inherit;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-
-        .view-toggle button:not(:last-child) {
-            border-right: 1px solid var(--border);
-        }
-
-        .view-toggle button.active {
-            background: var(--accent-glow);
-            color: var(--accent-light);
-        }
-
-        .view-toggle button:hover:not(.active) {
-            background: var(--surface-hover);
-            color: var(--text);
+            border-radius: var(--r-sm);
         }
 
         /* ── DELETE CONFIRM ── */
@@ -674,7 +651,8 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(10, 9, 7, 0.6);
+            backdrop-filter: blur(2px);
             z-index: 300;
             align-items: center;
             justify-content: center;
@@ -687,16 +665,16 @@
         .confirm-dialog {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: var(--r-lg);
             padding: 24px 28px;
             width: 340px;
             max-width: 90vw;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--shadow-2);
             text-align: center;
         }
 
         .confirm-dialog p {
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             color: var(--text);
             margin-bottom: 18px;
             line-height: 1.5;
@@ -708,35 +686,27 @@
             justify-content: center;
         }
 
-        .confirm-dialog button {
-            padding: 7px 20px;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.8rem;
-            font-weight: 500;
-            cursor: pointer;
+        /* ── FORM CONTROLS ── */
+        select, input[type="text"], input[type="number"] {
+            background: var(--app-bg); border: 1px solid var(--border);
+            border-radius: var(--r-sm); color: var(--text);
+            padding: 6px 10px; font-family: inherit; font-size: var(--fs-sm);
+            transition: border-color var(--transition);
         }
+        select:hover, input:hover { border-color: var(--surface-active); }
+        select:focus-visible, input:focus-visible { border-color: var(--accent); outline: none; }
 
-        .confirm-dialog .btn-cancel {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-        }
-
-        .confirm-dialog .btn-delete {
-            background: var(--danger);
-            border: none;
-            color: #fff;
-        }
+        input[type="range"] { accent-color: var(--accent); }
+        input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
 
         /* ── RENAME INLINE ── */
         .tab-rename-input {
             background: var(--app-bg);
             border: 1px solid var(--accent);
-            border-radius: 3px;
+            border-radius: var(--r-sm);
             color: var(--text-bright);
             font-family: inherit;
-            font-size: 0.75rem;
+            font-size: var(--fs-xs);
             padding: 1px 4px;
             width: 120px;
             outline: none;
@@ -768,25 +738,6 @@
             color: var(--border);
         }
 
-        .empty-state button {
-            margin-top: 8px;
-            padding: 8px 20px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.82rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-
-        .empty-state button:hover {
-            background: var(--accent-light);
-            transform: translateY(-1px);
-        }
-
         /* ── STATUS BAR ── */
         .status-bar {
             display: flex;
@@ -795,7 +746,7 @@
             padding: 3px 12px;
             background: var(--surface);
             border-top: 1px solid var(--border);
-            font-size: 0.65rem;
+            font-size: var(--fs-xs);
             color: var(--text-muted);
             flex-shrink: 0;
             user-select: none;
@@ -838,13 +789,13 @@
             bottom: 100%;
             right: 0;
             margin-bottom: 6px;
-            background: var(--card-bg);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: var(--r-md);
             padding: 14px;
             min-width: 260px;
             z-index: 2000;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            box-shadow: var(--shadow-1);
         }
 
         .timer-popover.open {
@@ -886,30 +837,6 @@
             margin-top: 6px;
         }
 
-        .timer-popover .pop-btn {
-            padding: 4px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text-bright);
-            font-size: 0.7rem;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-
-        .timer-popover .pop-btn:hover {
-            background: rgba(255,255,255,0.08);
-        }
-
-        .timer-popover .pop-btn.primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-        }
-
-        .timer-popover .pop-btn.primary:hover {
-            filter: brightness(1.15);
-        }
 
         .timer-popover hr {
             border: none;
@@ -1117,23 +1044,17 @@
             inset: 0;
             z-index: 1000;
             flex-direction: column;
-            background: radial-gradient(circle at center, #2d3630 0%, #1c211d 100%);
+            background: #111111;
             transition: background 0.3s ease;
         }
 
         .fullscreen-overlay.fs-light-mode {
-            background: #fdfdfd !important;
+            background: #ffffff !important;
         }
 
         .fullscreen-overlay.fs-light-mode #djupvattenContainer,
-        .fullscreen-overlay.fs-light-mode #mareldVeil,
-        .fullscreen-overlay.fs-light-mode canvas {
+        .fullscreen-overlay.fs-light-mode #mareldVeil {
             display: none !important;
-        }
-
-        .fullscreen-overlay.bg-image {
-            background: linear-gradient(to bottom, rgba(28,33,29,0.7), rgba(28,33,29,0.85)), url('forest-bg.jpg') no-repeat center center;
-            background-size: cover;
         }
 
         /* Dold Sidebar för Textstorlek i Fullskärm */
@@ -1283,13 +1204,13 @@
             top: 100%;
             right: 0;
             margin-top: 8px;
-            background: rgba(30, 31, 35, 0.95);
+            background: var(--surface);
             backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--r-md);
             padding: 12px 0;
             min-width: 220px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            box-shadow: var(--shadow-1);
             opacity: 0;
             pointer-events: none;
             transform: translateY(-8px);
@@ -1798,62 +1719,93 @@
             from { opacity: 1; transform: translateY(0); }
             to { opacity: 0; transform: translateY(-10px); }
         }
+
+        /* ── RESPONSIVE DESIGN ── */
+        @media (max-width: 768px) {
+            .modal-content {
+                padding: 15px;
+                width: 95%;
+            }
+            .fs-header {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px;
+            }
+            .fs-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+            .fs-title-input {
+                width: 140px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <!-- TEXT CONTEXT -->
     <script src="text-context.js"></script>
+    <script src="katakana-bg.js"></script>
         
     <div id="toastContainer"></div>
 
     <!-- TOOLBAR -->
     <div class="toolbar">
-        <div class="toolbar-brand">✏️ Skrivr v5.12.2</div>
+        <div class="toolbar-brand">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            Skrivr v5.12.2
+        </div>
         
-        <button class="mobile-menu-btn tooltip-wrap" data-tip="Meny" onclick="toggleMobileMenu()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        <button class="btn btn-ghost btn-sm mobile-menu-btn tooltip-wrap" data-tip="Meny" onclick="toggleMobileMenu()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
 
         <div class="toolbar-actions" id="toolbarActions">
             <div class="toolbar-sep"></div>
 
             <div class="view-toggle">
-                <button id="viewBoth" class="active tooltip-wrap" data-tip="Split-vy: editor + preview" onclick="setViewMode('both')">⬒</button>
-                <button id="viewEditor" class="tooltip-wrap" data-tip="Enbart editor" onclick="setViewMode('editor')">✎</button>
-                <button id="viewPreview" class="tooltip-wrap" data-tip="Enbart förhandsgranskning" onclick="setViewMode('preview')">◉</button>
+                <button id="viewBoth" class="btn btn-ghost btn-sm active tooltip-wrap" data-tip="Split-vy: editor + preview" onclick="setViewMode('both')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="12" x2="21" y2="12"></line></svg>
+                </button>
+                <button id="viewEditor" class="btn btn-ghost btn-sm tooltip-wrap" data-tip="Enbart editor" onclick="setViewMode('editor')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </button>
+                <button id="viewPreview" class="btn btn-ghost btn-sm tooltip-wrap" data-tip="Enbart förhandsgranskning" onclick="setViewMode('preview')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
             </div>
 
             <div class="toolbar-sep"></div>
 
-            <button class="tb-btn tooltip-wrap" data-tip="Kopiera markdown till clipboard (⌘⇧C)" onclick="copyMarkdown()">
-                <span class="icon">📋</span> Kopiera
+            <button class="btn btn-secondary btn-sm tooltip-wrap" data-tip="Kopiera markdown till clipboard (⌘⇧C)" onclick="copyMarkdown()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Kopiera
             </button>
             <span id="copyFeedback" class="copy-feedback">✓ Kopierat!</span>
 
             <div class="toolbar-sep"></div>
 
-            <button class="tb-btn tooltip-wrap" data-tip="Ladda ner som textfil" onclick="exportTxt()">
-                <span class="icon">📄</span> .txt
+            <button class="btn btn-secondary btn-sm tooltip-wrap" data-tip="Ladda ner som textfil" onclick="exportTxt()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> .txt
             </button>
-            <button class="tb-btn tooltip-wrap" data-tip="Exportera som PDF via utskrift (⌘P)" onclick="exportPdf()">
-                <span class="icon">🖨️</span> .pdf
+            <button class="btn btn-secondary btn-sm tooltip-wrap" data-tip="Exportera som PDF via utskrift (⌘P)" onclick="exportPdf()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> .pdf
             </button>
 
             <div class="toolbar-sep"></div>
 
-            <button class="tb-btn tooltip-wrap" data-tip="Distraktionsfritt skrivläge (⌘↵)" onclick="enterFullscreen()">
-                <span class="icon">🖥</span> Fokus
+            <button class="btn btn-secondary btn-sm tooltip-wrap" data-tip="Distraktionsfritt skrivläge (⌘↵)" onclick="enterFullscreen()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Fokus
             </button>
 
             <div class="toolbar-spacer"></div>
 
-            <button class="tb-btn tooltip-wrap" data-tip="Visa kortkommandon" style="color:var(--text-dim);" onclick="openShortcuts()">
-                <span class="icon">⌨️</span>
+            <button class="btn btn-ghost btn-sm tooltip-wrap" data-tip="Visa kortkommandon" onclick="openShortcuts()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="6" y1="12" x2="6.01" y2="12"></line><line x1="10" y1="12" x2="10.01" y2="12"></line><line x1="14" y1="12" x2="14.01" y2="12"></line><line x1="18" y1="12" x2="18.01" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg>
             </button>
 
-            <button class="tb-btn accent tooltip-wrap" data-tip="Anpassa färger, storlek och typsnitt" onclick="openSettings()">
-                <span class="icon">⚙</span> Utseende
+            <button class="btn btn-primary btn-sm tooltip-wrap" data-tip="Anpassa färger, storlek och typsnitt" onclick="openSettings()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Utseende
             </button>
         </div>
     </div>
@@ -1885,10 +1837,14 @@
 
     <!-- EMPTY STATE -->
     <div class="empty-state" id="emptyState" style="display:none;">
-        <div class="icon">✏️</div>
+        <div class="icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
         <p>Inget dokument öppet</p>
         <p class="hint">Skapa ett nytt dokument för att börja skriva</p>
-        <button onclick="createNewDoc()">Nytt dokument</button>
+        <button class="btn btn-primary" onclick="createNewDoc()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Nytt dokument
+        </button>
     </div>
 
     <!-- STATUS BAR -->
@@ -1905,13 +1861,16 @@
             <span id="goalDisplay">—</span>
         </div>
         <div class="timer-widget status-item" id="timerWidget" onclick="toggleTimerPopover(event)">
-            <span id="timerDisplay">⏱ —</span>
+            <span id="timerDisplay" style="display:inline-flex; align-items:center; gap:4px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>—</span>
+            </span>
             <div class="timer-popover" id="timerPopover">
                 <label>Timer-typ</label>
                 <select id="timerType" onchange="onTimerTypeChange()">
-                    <option value="pomodoro">⏱ Pomodoro (25 min)</option>
-                    <option value="countdown">⏲ Nedräkning</option>
-                    <option value="session">⏳ Skrivsession</option>
+                    <option value="pomodoro">Pomodoro (25 min)</option>
+                    <option value="countdown">Nedräkning</option>
+                    <option value="session">Skrivsession</option>
                 </select>
                 <label>Tid (minuter)</label>
                 <div class="pop-row">
@@ -1923,9 +1882,15 @@
                     <span>Visa siffror</span>
                 </div>
                 <div class="pop-row">
-                    <button class="pop-btn primary" onclick="startTimer()">▶ Starta</button>
-                    <button class="pop-btn" onclick="pauseTimer()">⏸ Paus</button>
-                    <button class="pop-btn" onclick="stopTimer()">⏹ Stopp</button>
+                    <button class="btn btn-primary btn-sm" onclick="startTimer()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Starta
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="pauseTimer()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg> Paus
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="stopTimer()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg> Stopp
+                    </button>
                 </div>
                 <hr>
                 <label>Skrivmål</label>
@@ -1937,8 +1902,8 @@
                     <input type="number" id="goalTarget" value="500" min="10" max="100000" />
                 </div>
                 <div class="pop-row">
-                    <button class="pop-btn primary" onclick="setWritingGoal()">Sätt mål</button>
-                    <button class="pop-btn" onclick="clearWritingGoal()">Nollställ</button>
+                    <button class="btn btn-primary btn-sm" onclick="setWritingGoal()">Sätt mål</button>
+                    <button class="btn btn-secondary btn-sm" onclick="clearWritingGoal()">Nollställ</button>
                 </div>
             </div>
         </div>
@@ -1948,7 +1913,7 @@
     <!-- SHORTCUTS OVERLAY -->
     <div class="settings-overlay" id="shortcutsOverlay">
         <div class="settings-panel">
-            <h3>⌨️ Kortkommandon</h3>
+            <h3><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:8px;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="6" y1="12" x2="6.01" y2="12"></line><line x1="10" y1="12" x2="10.01" y2="12"></line><line x1="14" y1="12" x2="14.01" y2="12"></line><line x1="18" y1="12" x2="18.01" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg> Kortkommandon</h3>
             <table class="shortcuts-table" style="width:100%; text-align:left; border-spacing:0 12px; margin-bottom:20px; font-size:0.95rem; color:var(--text)">
                 <tr><td style="color:var(--accent); font-weight:600; padding-right:16px;">⌘/Ctrl + N</td><td>Nytt dokument</td></tr>
                 <tr><td style="color:var(--accent); font-weight:600;">⌘/Ctrl + O</td><td>Importera fil</td></tr>
@@ -1960,7 +1925,7 @@
                 <tr><td style="color:var(--accent); font-weight:600;">Esc</td><td>Stäng dialoger / Fokus</td></tr>
             </table>
             <div class="settings-actions">
-                <button class="btn-close-settings" onclick="closeShortcuts()">Stäng</button>
+                <button class="btn btn-primary" onclick="closeShortcuts()">Stäng</button>
             </div>
         </div>
     </div>
@@ -1968,7 +1933,7 @@
     <!-- SETTINGS OVERLAY -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-panel">
-            <h3>⚙ Utseende</h3>
+            <h3><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Utseende</h3>
 
             <div class="setting-row">
                 <label>Bakgrundsfärg (preview)</label>
@@ -2037,6 +2002,7 @@
                     <option value="valsang">Valsång (Kontinuerlig)</option>
                     <option value="skogsklang">Skogsklang (Harmoniskt & Eldflugor)</option>
                     <option value="hardfork">Hard Fork (Generativa beats & Matrix)</option>
+                    <option value="space">Space Odyssey (Rymdsyntar)</option>
                 </select>
                 <div class="setting-desc">OBS: Gäller endast i fullskärmsläge.</div>
             </div>
@@ -2080,12 +2046,12 @@
             <div class="setting-row">
                 <label>Radfärg</label>
                 <div class="color-swatches" id="highlightSwatches">
-                    <div class="color-swatch" style="background:rgba(124,92,191,0.12)" data-color="rgba(124,92,191,0.12)" onclick="setHighlightColor(this)" title="Lila"></div>
-                    <div class="color-swatch" style="background:rgba(64,192,87,0.10)" data-color="rgba(64,192,87,0.10)" onclick="setHighlightColor(this)" title="Grön"></div>
-                    <div class="color-swatch" style="background:rgba(34,139,230,0.10)" data-color="rgba(34,139,230,0.10)" onclick="setHighlightColor(this)" title="Blå"></div>
-                    <div class="color-swatch" style="background:rgba(250,176,5,0.10)" data-color="rgba(250,176,5,0.10)" onclick="setHighlightColor(this)" title="Amber"></div>
-                    <div class="color-swatch" style="background:rgba(224,49,49,0.08)" data-color="rgba(224,49,49,0.08)" onclick="setHighlightColor(this)" title="Röd"></div>
-                    <div class="color-swatch" style="background:rgba(255,255,255,0.05)" data-color="rgba(255,255,255,0.05)" onclick="setHighlightColor(this)" title="Diskret"></div>
+                    <div class="color-swatch" style="background:var(--surface)" data-color="var(--surface)" onclick="setHighlightColor(this)" title="Sot (Standard)"></div>
+                    <div class="color-swatch" style="background:#262420" data-color="#262420" onclick="setHighlightColor(this)" title="Mörk Mässing"></div>
+                    <div class="color-swatch" style="background:#1d2226" data-color="#1d2226" onclick="setHighlightColor(this)" title="Mörk Blå"></div>
+                    <div class="color-swatch" style="background:#261b1a" data-color="#261b1a" onclick="setHighlightColor(this)" title="Mörk Röd"></div>
+                    <div class="color-swatch" style="background:#1b241c" data-color="#1b241c" onclick="setHighlightColor(this)" title="Mörk Grön"></div>
+                    <div class="color-swatch" style="background:var(--app-bg)" data-color="var(--app-bg)" onclick="setHighlightColor(this)" title="Transparent/Bakgrund"></div>
                 </div>
             </div>
 
@@ -2098,8 +2064,8 @@
             </div>
 
             <div class="settings-actions">
-                <button class="btn-reset" onclick="resetSettings()">Återställ</button>
-                <button class="btn-close-settings" onclick="closeSettings()">Stäng</button>
+                <button class="btn btn-danger" onclick="resetSettings()">Återställ</button>
+                <button class="btn btn-primary" onclick="closeSettings()">Stäng</button>
             </div>
         </div>
     </div>
@@ -2109,8 +2075,8 @@
         <div class="confirm-dialog">
             <p id="confirmMessage">Ta bort detta dokument?</p>
             <div class="actions">
-                <button class="btn-cancel" onclick="closeConfirm()">Avbryt</button>
-                <button class="btn-delete" id="confirmDeleteBtn">Ta bort</button>
+                <button class="btn btn-secondary" onclick="closeConfirm()">Avbryt</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Ta bort</button>
             </div>
         </div>
     </div>
@@ -2127,6 +2093,9 @@
         <canvas id="mareldCanvas" style="position:absolute; inset:0; z-index:1; pointer-events:none;"></canvas>
         <div id="mareldVeil" style="position:absolute; inset:0; z-index:2; pointer-events:none; background: radial-gradient(circle, transparent 20%, rgba(25,15,40,0.85) 120%); opacity:0; transition:opacity 2s;"></div>
         
+        <!-- Katakana Background -->
+        <canvas id="katakanaCanvas" style="position:absolute; inset:0; z-index:1; pointer-events:none; display:none;"></canvas>
+
         <!-- Dold sidebar för textstorlek -->
         <div class="fs-sidebar" id="fsSidebar">
             <div class="fs-slider-container">
@@ -2139,38 +2108,39 @@
             <span class="fs-title tooltip-wrap" id="fsTitle" data-tip="Byt namn" onclick="renameFullscreenTitle()">Dokument</span>
             <span class="fs-timer" id="fsTimerDisplay"></span>
             <div class="fs-actions">
-                <button class="fs-btn tooltip-wrap" style="color:var(--text-dim);" data-tip="Kortkommandon" onclick="openShortcuts()">⌨️</button>
-                <button class="fs-btn tooltip-wrap" id="btnFsTheme" data-tip="Byt ljust/mörkt tema" onclick="toggleFsTheme()">🌓 Tema</button>
-                <button class="fs-btn tooltip-wrap" id="btnFsMute" data-tip="Stäng av/sätt på skrivljud" onclick="toggleMute()">🔊 Mute</button>
-                <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()">☰ Outline</button>
+                <button class="fs-btn tooltip-wrap" style="color:var(--text-dim);" data-tip="Kortkommandon" onclick="openShortcuts()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="6" y1="12" x2="6.01" y2="12"></line><line x1="10" y1="12" x2="10.01" y2="12"></line><line x1="14" y1="12" x2="14.01" y2="12"></line><line x1="18" y1="12" x2="18.01" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg></button>
+                <button class="fs-btn tooltip-wrap" id="btnFsTheme" data-tip="Byt ljust/mörkt tema" onclick="toggleFsTheme()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Tema</button>
+                <button class="fs-btn tooltip-wrap" id="btnKatakana" data-tip="Glimrande matrix-bakgrund" onclick="toggleKatakanaBg()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Katakana</button>
+                <button class="fs-btn tooltip-wrap" id="btnFsMute" data-tip="Stäng av/sätt på skrivljud" onclick="toggleMute()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg> Mute</button>
+                <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Outline</button>
                 <div class="fs-dropdown" id="fsSettingsDropdown">
-                    <button class="fs-btn tooltip-wrap" id="btnFsSettings" data-tip="Fokusinställningar" onclick="toggleFsSettings(event)">⚙ Meny</button>
+                    <button class="fs-btn tooltip-wrap" id="btnFsSettings" data-tip="Fokusinställningar" onclick="toggleFsSettings(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Meny</button>
                     <div class="fs-dropdown-menu" id="fsSettingsMenu">
                         <div class="fs-dropdown-item">
                             <label>Bredd</label>
                             <input type="range" class="fs-width-slider" id="fsWidthSlider" min="40" max="130" value="72" oninput="setFsWidth(this.value)">
                             <span class="fs-width-value" id="fsWidthValue">72c</span>
                         </div>
-                        <div class="fs-dropdown-item focus-dim-item">
-                            <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()">👁 Dimma: Av</button>
-                            <div class="fs-zone-control" id="fsZoneControl" style="display:none;">
-                                <label>Zon</label>
-                                <input type="range" class="fs-width-slider" id="fsZoneSlider" min="1" max="15" value="3" oninput="setFsZone(this.value)">
-                                <span class="fs-width-value" id="fsZoneValue">3 Rader</span>
-                            </div>
+                        <div class="fs-dropdown-item" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px;">
+                            <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Dimma: Av</button>
+                        </div>
+                        <div class="fs-dropdown-item focus-dim-item" id="focusDimItem" style="display:none; padding-top:0;">
+                            <label>Ljusstyrka i dimma</label>
+                            <input type="range" class="fs-width-slider" id="fsDimSlider" min="10" max="100" value="30" oninput="setFocusDim(this.value)">
+                            <span class="fs-width-value" id="fsDimValue">30%</span>
+                        </div>
+                        <div class="fs-dropdown-item" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px;">
+                            <button class="fs-btn-full" id="btnCenterScroll" style="display:none;" onclick="updateLineHighlight(true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Centrera aktiv rad</button>
                         </div>
                         <div class="fs-dropdown-item">
-                            <button class="fs-btn-full" id="btnCenterScroll" style="display:none;" onclick="updateLineHighlight(true)">⌖ Centrera aktiv rad</button>
+                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg> Helskärm (F11)</button>
                         </div>
                         <div class="fs-dropdown-item">
-                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()">⛶ Helskärm (F11)</button>
-                        </div>
-                        <div class="fs-dropdown-item">
-                            <button class="fs-btn-full" onclick="copyMarkdown()">📋 Kopiera markdown</button>
+                            <button class="fs-btn-full" onclick="copyMarkdown()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Kopiera markdown</button>
                         </div>
                     </div>
                 </div>
-                <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="closeFocusMode()">✕ Stäng</button>
+                <button class="fs-btn tooltip-wrap" data-tip="Avsluta fokusläge (Esc)" onclick="closeFocusMode()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Stäng</button>
             </div>
         </div>
         <div class="fs-editor-wrap" id="fsEditorWrap">
@@ -2199,6 +2169,7 @@
         import { SkogsklangEngine } from './skogsklang-engine.js?v=60';
         import { VisualsEngine } from './visuals-engine.js?v=60';
         import { HardForkEngine } from './hardfork-engine.js?v=60';
+        import { SpaceOdysseyEngine } from './space-engine.js?v=1';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
@@ -2218,6 +2189,14 @@
         let activeDocId = null;
         let saveTimer = null;
         let viewMode = localStorage.getItem(VIEW_KEY) || 'both';
+
+        // Läs in tidigare ljust tema för fullskärm
+        if (localStorage.getItem('gaia_fs_light_mode') === 'true') {
+            document.addEventListener('DOMContentLoaded', () => {
+                const overlay = document.getElementById('fullscreenOverlay');
+                if (overlay) overlay.classList.add('fs-light-mode');
+            });
+        }
         let fileHandles = {}; // docId -> FileSystemFileHandle
 
         // Default settings
@@ -2580,8 +2559,8 @@
                     const hasHandle = !!fileHandles[doc.id];
                     if (!hasHandle) {
                         statusSaved.innerHTML =
-                            `<span style="color:#fab005">⚠️</span> Koppling bruten ` +
-                            `<button onclick="reconnectLocalFile('${doc.id}')" style="background:#fab005; color:#1a1b1e; border:none; padding:2px 6px; border-radius:4px; font-size:0.6rem; cursor:pointer; font-weight:bold; margin-left:4px;">🔗 Återanslut</button>`;
+                            `<span style="color:var(--danger)">⚠️</span> Koppling bruten ` +
+                            `<button onclick="reconnectLocalFile('${doc.id}')" class="btn btn-secondary btn-sm" style="margin-left:4px;">Återanslut</button>`;
                     } else {
                         statusSaved.innerHTML =
                             '<span style="color:var(--success)">●</span> Synkad mot disk';
@@ -2762,6 +2741,10 @@
             updateStats(doc.content);
 
             triggerAutosave(doc);
+            
+            if (window.VisualsEngine && typeof window.VisualsEngine.syncHardForkSentences === 'function') {
+                window.VisualsEngine.syncHardForkSentences(doc.content);
+            }
         });
 
         // Tab support in textarea
@@ -3145,16 +3128,13 @@
                 overlay.classList.remove('bg-image');
             }
             
-            if (typewriterSoundProfile === 'skogsklang') {
-                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.85), rgba(4, 6, 12, 0.95)), url('forest-bg.jpg') no-repeat center center";
-                overlay.style.backgroundSize = 'cover';
-            } else {
-                overlay.style.background = '';
-            }
+            overlay.style.background = ''; // Strikt gråskala, oavsett ljudprofil
             
             document.getElementById('settZenBg').value = settings.fsBgType || 'gradient';
 
-            highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
+            // Use solid background for active line to block Katakana
+            highlightColor = 'var(--app-bg)';
+            
             const container = document.getElementById('fsEditorContainer');
             const btnCenter = document.getElementById('btnCenterScroll');
             if (typewriterEnabled) {
@@ -3208,7 +3188,7 @@
 
             // Initiera Valsång/Skogsklang om det är valt
             if (window.TextContext) window.TextContext.attach(document.getElementById('fsTextarea'));
-            const isContinuousProfile = ['valsang', 'skogsklang', 'hardfork'].includes(typewriterSoundProfile);
+            const isContinuousProfile = ['valsang', 'skogsklang', 'hardfork', 'space'].includes(typewriterSoundProfile);
             if (isContinuousProfile && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -3237,6 +3217,15 @@
                         }
                     });
                 }
+                if (typewriterSoundProfile === 'space' && window.SpaceOdysseyEngine) {
+                    window.SpaceOdysseyEngine.init(audioCtx);
+                    window.SpaceOdysseyEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                    window.SpaceOdysseyEngine.onSentence((info) => {
+                        if (window.VisualsEngine) {
+                            if (typeof window.VisualsEngine.addHardForkSentence === 'function') window.VisualsEngine.addHardForkSentence(info.length);
+                        }
+                    });
+                }
             }
             
             // Initiera VisualsEngine
@@ -3256,6 +3245,8 @@
                     stateProvider = () => window.SkogsklangEngine.getState();
                 } else if (typewriterSoundProfile === 'hardfork' && window.HardForkEngine) {
                     stateProvider = () => window.HardForkEngine.getState();
+                } else if (typewriterSoundProfile === 'space' && window.SpaceOdysseyEngine) {
+                    stateProvider = () => window.SpaceOdysseyEngine.getState();
                 }
 
                 window.VisualsEngine.init(domElements, stateProvider);
@@ -3264,7 +3255,8 @@
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
                     skogstemaMode: (typewriterSoundProfile === 'skogsklang'),
-                    hardforkMode: (typewriterSoundProfile === 'hardfork'),
+                    hardforkMode: (typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space'),
+                    spaceMode: (typewriterSoundProfile === 'space'),
                     fireflyMode: settings.fireflyMode || 'sentence',
                     goalProgress: window._currentGoalProgress || 0,
                     theme: 'dark'
@@ -3333,7 +3325,6 @@
             }
         });
 
-        // Fullscreen textarea events
         document.getElementById('fsTextarea').addEventListener('input', (e) => {
             const doc = getActiveDoc();
             if (!doc) return;
@@ -3346,6 +3337,10 @@
             triggerAutosave(doc);
 
             updateLineHighlight(true);
+            
+            if (window.VisualsEngine && typeof window.VisualsEngine.syncHardForkSentences === 'function') {
+                window.VisualsEngine.syncHardForkSentences(doc.content);
+            }
         });
 
         let _lastCursorPos = -1;
@@ -3376,6 +3371,7 @@
             if (profile === 'valsang') engine = window.ValsangEngine;
             else if (profile === 'skogsklang') engine = window.SkogsklangEngine;
             else if (profile === 'hardfork') engine = window.HardForkEngine;
+            else if (profile === 'space') engine = window.SpaceOdysseyEngine;
             if (!engine) return;
             
             const t = ev.inputType;
@@ -3385,6 +3381,9 @@
                 engine.handleChar('\n');
             } else if (t.startsWith('deleteContent')) {
                 engine.handleChar('\b');
+                if ((typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space') && window.VisualsEngine && window.VisualsEngine.syncHardForkChars) {
+                    window.VisualsEngine.syncHardForkChars();
+                }
             }
         });
 
@@ -3396,7 +3395,7 @@
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
-                if (typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'skogsklang' || typewriterSoundProfile === 'hardfork') {
+                if (typewriterSoundProfile === 'valsang' || typewriterSoundProfile === 'skogsklang' || typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space') {
                     return; // Hanteras av beforeinput
                 }
                 if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -3431,21 +3430,60 @@
                             filterFreq = 1500; filterQ = 2.0;
                         }
                     } else if (typewriterSoundProfile === 'vintage') {
-                        // Vintage, tung skrivmaskin
-                        osc.type = isEnter ? 'triangle' : 'sawtooth';
-                        if (isEnter) {
-                            frequency = 2500; rampToFreq = 2000;
-                            gainVol = 0.6; rampToGain = 0.01; duration = 0.5;
-                            filterFreq = 3000; filterQ = 5.0;
-                        } else if (isBackspace) {
-                            frequency = 80; rampToFreq = 30;
-                            gainVol = 0.6; rampToGain = 0.01; duration = 0.1;
-                            filterFreq = 500; filterQ = 0.5;
-                        } else {
-                            frequency = 150 + Math.random() * 50; rampToFreq = 40;
-                            gainVol = 0.8; rampToGain = 0.01; duration = 0.06;
-                            filterFreq = 1000; filterQ = 0.5;
+                        // Realistiskt mekaniskt Vintage-ljud med AudioBuffer (brus)
+                        if (!window.vintageNoiseBuffer) {
+                            const bufferSize = audioCtx.sampleRate * 0.1; // 100ms
+                            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                            const data = buffer.getChannelData(0);
+                            for (let i = 0; i < bufferSize; i++) {
+                                data[i] = Math.random() * 2 - 1; // Vitt brus
+                            }
+                            window.vintageNoiseBuffer = buffer;
                         }
+                        
+                        const noiseSource = audioCtx.createBufferSource();
+                        noiseSource.buffer = window.vintageNoiseBuffer;
+                        const noiseFilter = audioCtx.createBiquadFilter();
+                        const noiseGain = audioCtx.createGain();
+                        
+                        noiseFilter.type = 'bandpass';
+                        noiseSource.connect(noiseFilter);
+                        noiseFilter.connect(noiseGain);
+                        noiseGain.connect(audioCtx.destination);
+                        
+                        if (isEnter) {
+                            // "Ding!" med en liten mekanisk duns
+                            osc.type = 'sine';
+                            frequency = 1600; rampToFreq = 1600;
+                            gainVol = 0.6; rampToGain = 0.001; duration = 0.6;
+                            filterFreq = 2000; filterQ = 5.0;
+                            
+                            noiseFilter.frequency.value = 400;
+                            noiseGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                            noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                        } else if (isBackspace) {
+                            // Tyngre mekaniskt "klick-klack"
+                            osc.type = 'triangle';
+                            frequency = 180; rampToFreq = 80;
+                            gainVol = 0.4; rampToGain = 0.01; duration = 0.08;
+                            filterFreq = 1000; filterQ = 1.0;
+                            
+                            noiseFilter.frequency.value = 1200;
+                            noiseGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                            noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                        } else {
+                            // Snabbt snäpp
+                            osc.type = 'square';
+                            frequency = 300 + Math.random() * 50; rampToFreq = 150;
+                            gainVol = 0.3; rampToGain = 0.01; duration = 0.04;
+                            filterFreq = 4000; filterQ = 0.5;
+                            
+                            noiseFilter.frequency.value = 2500 + Math.random() * 500;
+                            noiseGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+                            noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+                        }
+                        noiseSource.start();
+                        noiseSource.stop(audioCtx.currentTime + 0.1);
                     } else {
                         // Original digital
                         osc.type = 'square';
@@ -3701,42 +3739,10 @@
         function setFsZone(val) {
             document.getElementById('fsZoneValue').textContent = val + ' Rader';
             const settings = loadSettings();
-            settings.focusZoneLines = parseInt(val, 10);
+            settings.focusZone = parseInt(val);
             saveSettings(settings);
             updateLineHighlight(false);
         }
-
-        // ── Total Zen ──
-        let lastZenReset = 0;
-
-        function startZenTimer() {
-            const overlay = document.getElementById('fullscreenOverlay');
-            clearTimeout(zenTimer);
-            overlay.classList.remove('zen-mode');
-            if (isFullscreen) {
-                zenTimer = setTimeout(() => {
-                    overlay.classList.add('zen-mode');
-                }, 3000);
-            }
-        }
-
-        function resetZen() {
-            if (!isFullscreen) return;
-            const now = Date.now();
-            if (now - lastZenReset < 200) return; // VEP Opt: Throttle events to prevent GC thrashing
-            lastZenReset = now;
-            
-            const overlay = document.getElementById('fullscreenOverlay');
-            if (overlay.classList.contains('zen-mode')) {
-                overlay.classList.remove('zen-mode');
-            }
-            clearTimeout(zenTimer);
-            zenTimer = setTimeout(() => {
-                if (isFullscreen) overlay.classList.add('zen-mode');
-            }, 3000);
-        }
-
-        // Zen triggers: mouse, keyboard, touch
         document.getElementById('fullscreenOverlay').addEventListener('mousemove', resetZen);
         document.getElementById('fullscreenOverlay').addEventListener('touchstart', resetZen);
         document.getElementById('fsTextarea').addEventListener('keydown', resetZen);
@@ -3749,6 +3755,53 @@
             panel.classList.toggle('open');
             if (panel.classList.contains('open')) buildOutline();
         }
+
+        window.toggleFsTheme = function toggleFsTheme() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.toggle('fs-light-mode');
+            const isLight = overlay.classList.contains('fs-light-mode');
+            localStorage.setItem('gaia_fs_light_mode', isLight ? 'true' : 'false');
+            
+            const ta = document.getElementById('fsTextarea');
+            const djup = document.getElementById('djupvattenContainer');
+            
+            if (isLight) {
+                // Säkerställ att inline-stilar inte vinner över css
+                overlay.style.setProperty('background', '#fdfdfd', 'important');
+                if (ta) {
+                    ta.style.setProperty('color', '#1a1a1a', 'important');
+                    ta.style.setProperty('caret-color', '#1a1a1a', 'important');
+                }
+                if (djup) djup.style.setProperty('display', 'none', 'important');
+            } else {
+                // Ta bort inline !important så CSS-klasserna kan styra
+                overlay.style.removeProperty('background');
+                if (ta) {
+                    ta.style.removeProperty('color');
+                    ta.style.removeProperty('caret-color');
+                }
+                if (djup) djup.style.removeProperty('display');
+                
+                // Återställ eventuell inline-background för engine
+                applySettings(loadSettings());
+            }
+        };
+
+        window.toggleMute = function toggleMute() {
+            const settings = loadSettings();
+            settings.typewriterSound = !settings.typewriterSound;
+            saveSettings(settings);
+            applySettings(settings);
+            
+            const btn = document.getElementById('btnFsMute');
+            if (btn) btn.innerHTML = settings.typewriterSound ? '🔊 Mute' : '🔇 Unmute';
+            
+            const track = document.getElementById('settTypewriterSound');
+            if (track) {
+                if (settings.typewriterSound) track.classList.add('active');
+                else track.classList.remove('active');
+            }
+        };
 
         function buildOutline() {
             const ta = document.getElementById('fsTextarea');
@@ -3844,7 +3897,7 @@
             saveSettings(settings);
             applySettings(settings);
             
-            const isContinuous = ['valsang', 'skogsklang', 'hardfork'].includes(settings.typewriterSoundProfile);
+            const isContinuous = ['valsang', 'skogsklang', 'hardfork', 'space'].includes(settings.typewriterSoundProfile);
             document.getElementById('valsangSettings').style.display = isContinuous ? 'flex' : 'none';
             document.getElementById('valsangWaterSettings').style.display = (settings.typewriterSoundProfile === 'valsang') ? 'block' : 'none';
             document.getElementById('skogsklangSettings').style.display = (settings.typewriterSoundProfile === 'skogsklang') ? 'block' : 'none';
@@ -3852,6 +3905,7 @@
             if (window.ValsangEngine) window.ValsangEngine.destroy();
             if (window.SkogsklangEngine) window.SkogsklangEngine.destroy();
             if (window.HardForkEngine) window.HardForkEngine.destroy();
+            if (window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.destroy();
             
             if (isContinuous && settings.typewriterSound && isFullscreen) {
                 if (settings.typewriterSoundProfile === 'valsang' && window.ValsangEngine) {
@@ -3871,12 +3925,20 @@
                             if (typeof window.VisualsEngine.addHardForkSentence === 'function') window.VisualsEngine.addHardForkSentence(info.length);
                         }
                     });
+                } else if (settings.typewriterSoundProfile === 'space' && window.SpaceOdysseyEngine) {
+                    window.SpaceOdysseyEngine.init(audioCtx);
+                    window.SpaceOdysseyEngine.onSentence((info) => {
+                        if (window.VisualsEngine) {
+                            if (typeof window.VisualsEngine.addHardForkSentence === 'function') window.VisualsEngine.addHardForkSentence(info.length);
+                        }
+                    });
                 }
                 
                 if (window.VisualsEngine) {
                     window.VisualsEngine.setConfig({ 
                         skogstemaMode: (settings.typewriterSoundProfile === 'skogsklang'),
-                        hardforkMode: (settings.typewriterSoundProfile === 'hardfork'),
+                        hardforkMode: (settings.typewriterSoundProfile === 'hardfork' || settings.typewriterSoundProfile === 'space'),
+                        spaceMode: (settings.typewriterSoundProfile === 'space'),
                         fireflyMode: settings.fireflyMode || 'sentence'
                     });
                     
@@ -3887,6 +3949,8 @@
                         stateProvider = () => window.SkogsklangEngine.getState();
                     } else if (settings.typewriterSoundProfile === 'hardfork' && window.HardForkEngine) {
                         stateProvider = () => window.HardForkEngine.getState();
+                    } else if (settings.typewriterSoundProfile === 'space' && window.SpaceOdysseyEngine) {
+                        stateProvider = () => window.SpaceOdysseyEngine.getState();
                     }
                     window.VisualsEngine.setStateProvider(stateProvider);
                     window.VisualsEngine.start();
@@ -3901,7 +3965,7 @@
                 if (settings.typewriterSoundProfile === 'skogsklang') {
                     overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('forest-bg.jpg') no-repeat center center";
                     overlay.style.backgroundSize = 'cover';
-                } else if (settings.typewriterSoundProfile === 'hardfork') {
+                } else if (settings.typewriterSoundProfile === 'hardfork' || settings.typewriterSoundProfile === 'space') {
                     overlay.style.background = "#020604";
                 } else {
                     overlay.style.background = ""; 

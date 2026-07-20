@@ -1236,25 +1236,25 @@
                         }
                     } else if (typewriterSoundProfile === 'vintage') {
                         // Vintage, tung skrivmaskin med klocka på enter
-                        osc.type = isEnter ? 'sine' : (isBackspace ? 'triangle' : 'square');
+                        osc.type = isEnter ? 'triangle' : (isBackspace ? 'square' : (isSpace ? 'sawtooth' : 'square'));
                         if (isEnter) {
                             // "Ding!"-ljudet
                             frequency = 1600; rampToFreq = 1600;
-                            gainVol = 0.6; rampToGain = 0.01; duration = 0.8;
+                            gainVol = 0.7; rampToGain = 0.01; duration = 0.8;
                             filterFreq = 3000; filterQ = 1.0;
                         } else if (isBackspace) {
                             // Tungt mekaniskt klonk
-                            frequency = 250; rampToFreq = 40;
-                            gainVol = 0.8; rampToGain = 0.01; duration = 0.1;
+                            frequency = 600; rampToFreq = 40;
+                            gainVol = 1.0; rampToGain = 0.01; duration = 0.05;
                             filterFreq = 500; filterQ = 0.5;
                         } else if (isSpace) {
-                            frequency = 300; rampToFreq = 50;
-                            gainVol = 0.4; rampToGain = 0.01; duration = 0.05;
+                            frequency = 1200; rampToFreq = 60;
+                            gainVol = 0.6; rampToGain = 0.01; duration = 0.04;
                             filterFreq = 600; filterQ = 1.0;
                         } else {
                             // Tung, smutsig tangentnedslag (rapid drop)
-                            frequency = 600 + Math.random() * 200; rampToFreq = 50;
-                            gainVol = 0.9; rampToGain = 0.01; duration = 0.06;
+                            frequency = 2000; rampToFreq = 50;
+                            gainVol = 0.8; rampToGain = 0.01; duration = 0.03;
                             filterFreq = 1000; filterQ = 0.5;
                         }
                     } else {

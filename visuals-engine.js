@@ -23,7 +23,8 @@ export const VisualsEngine = (() => {
         fireflyMode: 'sentence', // 'sentence', 'goal', 'off'
         goalProgress: 0,
         prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        hardforkMode: false
+        hardforkMode: false,
+        spaceMode: false
     };
 
     // Data structures
@@ -31,9 +32,28 @@ export const VisualsEngine = (() => {
     const MAX_TRACES = 400; // Ringbuffert storlek
     let traceHead = 0;
     
+
+    // Starfield for Space Odyssey
+    const MAX_STARS = 400;
+    const stars = new Float32Array(MAX_STARS * 4); // x, y, z, size
+    let starsInitialized = false;
+    let starSpeed = 0.5;
+
+    function initStars() {
+        if (starsInitialized) return;
+        for (let i = 0; i < MAX_STARS; i++) {
+            stars[i*4] = (Math.random() - 0.5) * window.innerWidth * 2;
+            stars[i*4+1] = (Math.random() - 0.5) * window.innerHeight * 2;
+            stars[i*4+2] = Math.random() * 1000;
+            stars[i*4+3] = 0.5 + Math.random() * 2;
+        }
+        starsInitialized = true;
+    }
+
     const sparks = new Array(120).fill(null).map(() => ({ active: false }));
+    let lastHardForkSentencesText = [];
     const hardForkSentences = [];
-    
+    const hardForkBlocks = []; 
     let isLoopRunning = false;
     let rAFId = null;
     let lastTime = 0;
@@ -99,7 +119,7 @@ export const VisualsEngine = (() => {
         config = { ...config, ...newConfig };
         
         // Vindsus-läget och HardFork tvingar bort havstemat
-        if (config.skogstemaMode || config.hardforkMode) {
+        if (config.skogstemaMode || config.hardforkMode || config.spaceMode) {
             config.djupvattenEnabled = false;
             config.mareldEnabled = false;
             
@@ -410,21 +430,36 @@ export const VisualsEngine = (() => {
     
     function resetHardForkSentences() {
         hardForkSentences.length = 0;
+        lastHardForkSentencesText = [];
     }
 
     function syncHardForkSentences(text) {
         if (!config.hardforkMode) return;
         const segments = text.split(/[.!?]+/);
-        let sentenceCount = 0;
+        let validSentenceCount = 0;
         for (let i = 0; i < segments.length - 1; i++) {
-            // Count letters and spaces in the segment, just like hardfork-engine does
-            const len = (segments[i].match(/[a-zåäöA-ZÅÄÖ0-9 ]/g) || []).length;
-            if (len >= 2) sentenceCount++;
+            const len = (segments[i].match(/[a-zåäöA-ZÅÄÖ0-9]/g) || []).length;
+            if (len >= 2) {
+                validSentenceCount++;
+            }
         }
         
-        if (hardForkSentences.length > sentenceCount) {
-            hardForkSentences.length = sentenceCount; // truncate
+        if (hardForkSentences.length > validSentenceCount) {
+            // Remove the difference from the end
+            hardForkSentences.length = validSentenceCount;
             startLoop();
+        }
+    }
+
+    function syncHardForkChars() {
+        if (!config.hardforkMode) return;
+        // Hitta den senast skapade karaktären (som är i livet) och ta bort den direkt
+        for (let i = hardForkBlocks.length - 1; i >= 0; i--) {
+            if (hardForkBlocks[i].type === 'char') {
+                hardForkBlocks.splice(i, 1);
+                startLoop();
+                break;
+            }
         }
     }
 
@@ -555,7 +590,49 @@ export const VisualsEngine = (() => {
         let needsNextFrame = false;
         
         // Render Mareld & HardFork
-        if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode) && mareldCanvas && mareldCtx) {
+        if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode || config.spaceMode) && mareldCanvas && mareldCtx) {
+
+            if (config.spaceMode) {
+                initStars();
+                mareldCtx.fillStyle = '#020604';
+                mareldCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                
+                // Audio reactivity (using volumeFactor from stats)
+                const stats = window.TextContext && typeof window.TextContext.getStats === 'function' ? window.TextContext.getStats() : { N: 0 };
+                const heat = Math.min(1.0, stats.N / 5000); // Gradual increase in speed
+                
+                starSpeed = 0.5 + heat * 5.0; // Warp effect when writing
+                
+                const cx = window.innerWidth / 2;
+                const cy = window.innerHeight / 2;
+                
+                mareldCtx.fillStyle = '#FFFFFF';
+                for (let i = 0; i < MAX_STARS; i++) {
+                    let z = stars[i*4+2] - starSpeed * dt * 60;
+                    if (z <= 0) {
+                        z = 1000;
+                        stars[i*4] = (Math.random() - 0.5) * window.innerWidth * 2;
+                        stars[i*4+1] = (Math.random() - 0.5) * window.innerHeight * 2;
+                    }
+                    stars[i*4+2] = z;
+                    
+                    const k = 128.0 / z;
+                    const px = cx + stars[i*4] * k;
+                    const py = cy + stars[i*4+1] * k;
+                    
+                    if (px >= 0 && px <= window.innerWidth && py >= 0 && py <= window.innerHeight) {
+                        const size = stars[i*4+3] * k;
+                        const alpha = 1.0 - (z / 1000);
+                        mareldCtx.globalAlpha = alpha;
+                        mareldCtx.beginPath();
+                        mareldCtx.arc(px, py, size, 0, Math.PI * 2);
+                        mareldCtx.fill();
+                    }
+                }
+                mareldCtx.globalAlpha = 1.0;
+                needsNextFrame = true;
+            }
+
             let activeSparks = 0;
             mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
@@ -754,7 +831,7 @@ export const VisualsEngine = (() => {
             }
             if (activeSparks > 0 || config.skogstemaMode) needsNextFrame = true;
             
-            if (config.hardforkMode && hardForkSentences.length > 0) {
+            if (config.hardforkMode && !config.spaceMode && hardForkSentences.length > 0) {
                 const now = performance.now();
                 mareldCtx.textAlign = 'center';
                 for (const item of hardForkSentences) {
@@ -870,6 +947,7 @@ export const VisualsEngine = (() => {
         spawnHardForkBlock,
         addHardForkSentence,
         syncHardForkSentences,
+        syncHardForkChars,
         resetHardForkSentences,
         stop,
         start,

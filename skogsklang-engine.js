@@ -14,6 +14,7 @@ export const SkogsklangEngine = (() => {
     let ctx = null;
     let masterGain, dryGain, wetGain, compressor, convolver;
     let baseOsc, baseOscTri, baseGain;
+    let droneOsc, droneGain;
     let breathLFO, breathLFOGain;
     let voiceFilter;
     
@@ -145,6 +146,15 @@ export const SkogsklangEngine = (() => {
         baseTriGain.connect(baseGain);
         baseGain.connect(voiceFilter);
         
+        // Drone röst för H1 (lämna kvar klang)
+        droneOsc = ctx.createOscillator();
+        droneOsc.type = 'sine';
+        droneGain = ctx.createGain();
+        droneGain.gain.value = 0.0;
+        droneOsc.connect(droneGain);
+        droneGain.connect(voiceFilter);
+        droneOsc.start();
+        
         baseOsc.start();
         baseOscTri.start();
         
@@ -241,6 +251,7 @@ export const SkogsklangEngine = (() => {
         if (rebloomInterval) { clearInterval(rebloomInterval); rebloomInterval = null; }
         try {
             baseOsc.stop(); baseOscTri.stop();
+            if (droneOsc) droneOsc.stop();
             if (breathLFO) breathLFO.stop();
             voiceLFOs.forEach(l => l.osc.stop());
             voiceDriftLFOs.forEach(l => l.osc.stop());
@@ -417,24 +428,45 @@ export const SkogsklangEngine = (() => {
         const breathRate = lerp(0.12, 0.05, tempoNorm); // Justerat för bas-LFO
         if (breathLFO) breathLFO.frequency.setTargetAtTime(breathRate, ctx.currentTime, 2.0);
 
-        // 3.3 Tonart och skalfärg
-        if (stats.vowelRatio > 0.42 && !isDurScale) isDurScale = true;
-        if (stats.vowelRatio < 0.40 && isDurScale) isDurScale = false;
+        // 3.3 Tonart och skalfärg baserat på aktuell sektion
+        const sVowelRatio = stats.section_vowelRatio !== undefined ? stats.section_vowelRatio : stats.vowelRatio;
+        let baseDurScale = isDurScale;
+        if (sVowelRatio > 0.42) baseDurScale = true;
+        if (sVowelRatio < 0.40) baseDurScale = false;
+        
+        isDurScale = (stats.lastHeadingLevel >= 3) ? !baseDurScale : baseDurScale;
 
-        const verseSteps = [0, -3, 2, -5, 4];
-        const newRootMidi = clamp(48 + verseSteps[stats.paragraphs % 5], 43, 55);
-        if (newRootMidi !== rootMidi) {
-            rootMidi = newRootMidi; 
+        const verseSteps = [0, 7, -5, 2, -3, 4, 9, 5, -2, -7]; // Kvart/kvint-cirkeln inspirerat
+        const harmonicShiftCount = stats.harmonicShiftCount || 0;
+        const sectionRootMidi = clamp(48 + verseSteps[harmonicShiftCount % verseSteps.length], 36, 60);
+        
+        if (sectionRootMidi !== rootMidi) {
+            // H1 / H2 Skifte detekterat! 
+            // Aktivera drönaren på den GAMLA basfrekvensen
+            if (droneOsc && droneGain) {
+                const oldRootFreq = midiToFreq(rootMidi) / 2;
+                droneOsc.frequency.setValueAtTime(oldRootFreq, ctx.currentTime);
+                // Mjuk attack upp till drönarens peak (t.ex. 0.02)
+                droneGain.gain.setTargetAtTime(0.015, ctx.currentTime, 0.5);
+                // Därefter extremt långsam fadeout (ca 12 sekunder drone-release)
+                droneGain.gain.setTargetAtTime(0, ctx.currentTime + 1.0, 4.0);
+            }
+            rootMidi = sectionRootMidi; 
         }
+
+        // H3: Filter brightness
+        const targetFilterFreq = (stats.lastHeadingLevel >= 3) ? 2200 : 1400;
+        if (voiceFilter) voiceFilter.frequency.setTargetAtTime(targetFilterFreq, ctx.currentTime, 2.0);
 
         if (!key) return;
         if (key === '\n') key = 'Enter';
         else if (key === '\b') key = 'Backspace';
         const lowKey = key.toLowerCase();
 
-        // 3.4 Basrösten (Context)
+        // 3.4 Basrösten (Global kontext)
+        const baseRootMidi = 48; // Fast ankare för basen
         const centerDegree = 2 + (stats.meanAlpha / 28) * 8;
-        const baseTargetFreq = midiToFreq(degreeToMidi(Math.round(centerDegree), rootMidi)) / 2;
+        const baseTargetFreq = midiToFreq(degreeToMidi(Math.round(centerDegree), baseRootMidi)) / 2;
         baseOsc.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
         baseOscTri.frequency.setTargetAtTime(baseTargetFreq, ctx.currentTime, 3.0);
 

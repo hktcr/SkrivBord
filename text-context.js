@@ -14,6 +14,9 @@ const TextContext = (function() {
         sentCount: 0,
         sumSentLen: 0,
         paragraphs: 0,
+        headings: 0,
+        harmonicShiftCount: 0,
+        lastHeadingLevel: 0,
 
         // Derived stats
         meanAlpha: 14,
@@ -21,7 +24,17 @@ const TextContext = (function() {
         fricRatio: 0.10,
         meanWordLen: 5,
         meanSentLen: 60,
-        g: 1.0
+        g: 1.0,
+        
+        // Section raw counters (from last heading to end)
+        section_N: 0,
+        section_sumAlpha: 0,
+        section_vowelCount: 0,
+        section_fricCount: 0,
+
+        // Section derived stats
+        section_meanAlpha: 14,
+        section_vowelRatio: 0.38
     };
 
     let textarea = null;
@@ -41,6 +54,13 @@ const TextContext = (function() {
         statsObj.sentCount = 0;
         statsObj.sumSentLen = 0;
         statsObj.paragraphs = 0;
+        statsObj.headings = 0;
+        statsObj.harmonicShiftCount = 0;
+        statsObj.lastHeadingLevel = 0;
+        statsObj.section_N = 0;
+        statsObj.section_sumAlpha = 0;
+        statsObj.section_vowelCount = 0;
+        statsObj.section_fricCount = 0;
     }
 
     function computeDerived() {
@@ -50,6 +70,9 @@ const TextContext = (function() {
         statsObj.meanWordLen = statsObj.wordCount > 0 ? statsObj.sumWordLen / statsObj.wordCount : 5;
         statsObj.meanSentLen = statsObj.sentCount > 0 ? statsObj.sumSentLen / statsObj.sentCount : 60;
         statsObj.g = 40 / (40 + statsObj.N);
+        
+        statsObj.section_meanAlpha = statsObj.section_N > 0 ? statsObj.section_sumAlpha / statsObj.section_N : statsObj.meanAlpha;
+        statsObj.section_vowelRatio = statsObj.section_N > 0 ? statsObj.section_vowelCount / statsObj.section_N : statsObj.vowelRatio;
     }
 
     function doFullScan() {
@@ -67,13 +90,40 @@ const TextContext = (function() {
             const originalChar = text[i];
             const idx = ALFABET.indexOf(char);
             
+            if (originalChar === '#' && (i === 0 || text[i-1] === '\n')) {
+                let j = i;
+                while(j < text.length && text[j] === '#') j++;
+                if (j < text.length && text[j] === ' ' || text[j] === '\n' || j === text.length) {
+                    const level = j - i;
+                    statsObj.headings++;
+                    statsObj.lastHeadingLevel = level;
+                    
+                    if (level === 1) statsObj.harmonicShiftCount += 2;
+                    else if (level === 2) statsObj.harmonicShiftCount += 1;
+                    else if (level >= 3) statsObj.harmonicShiftCount += 0;
+                    
+                    statsObj.section_N = 0;
+                    statsObj.section_sumAlpha = 0;
+                    statsObj.section_vowelCount = 0;
+                    statsObj.section_fricCount = 0;
+                }
+            }
+            
             currentSentLen++;
 
             if (idx !== -1) {
                 statsObj.N++;
+                statsObj.section_N++;
                 statsObj.sumAlpha += idx;
-                if (VOKALER.has(char)) statsObj.vowelCount++;
-                if (FRIKATIVOR.has(char)) statsObj.fricCount++;
+                statsObj.section_sumAlpha += idx;
+                if (VOKALER.has(char)) {
+                    statsObj.vowelCount++;
+                    statsObj.section_vowelCount++;
+                }
+                if (FRIKATIVOR.has(char)) {
+                    statsObj.fricCount++;
+                    statsObj.section_fricCount++;
+                }
                 currentWordLen++;
             } else {
                 if (currentWordLen > 0) {

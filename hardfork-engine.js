@@ -54,6 +54,7 @@ export const HardForkEngine = (function() {
     let lastGlitchTime = 0;
 
     // Sentence Memory (Part C)
+    let lastHeadingCount = 0;
     let M = [0, 2, 4, 2, 0, 2, 4, 7].map(Number);
     let M_pending = null;
     let sentenceMelody = [];
@@ -198,6 +199,11 @@ export const HardForkEngine = (function() {
         M_pending = null;
         sentenceMelody = [];
         melodyBuffer = [];
+        isOutro = false;
+        pendingFillVariant = 'normal';
+        activeFillVariant = 'normal';
+        typeHeat = 0;
+        lastHeadingCount = 0;
     }
 
     function destroy() {
@@ -300,6 +306,12 @@ export const HardForkEngine = (function() {
     }
 
     function playGlitch(time, volMod = 1.0) {
+        const now = performance.now();
+        if (now - lastGlitchTime < 300) {
+            playRiser(time, 0.05, 0.03);
+            return;
+        }
+        lastGlitchTime = now;
         const osc = ctx.createOscillator(); osc.type = 'sawtooth';
         const gain = ctx.createGain();
         osc.frequency.setValueAtTime(800, time); osc.frequency.setValueAtTime(1200, time + 0.05);
@@ -534,15 +546,17 @@ export const HardForkEngine = (function() {
         const quantTime = nextNoteTime;
         
         if (key === '\b' || key === 'Delete') {
-            if (now - lastGlitchTime > 0.3) {
+            if (now - lastGlitchTime > 0.4) {
                 lastGlitchTime = now;
                 const r = Math.random();
                 if (r > 0.7) {
-                    playGlitch(quantTime, 0.4);
+                    playGlitch(quantTime, 0.15); // Lägre volym
                 } else if (r > 0.3) {
-                    playRiser(quantTime, 0.1, 0.05);
+                    // Soft noise sweep istället för riser
+                    playRiser(quantTime, 0.05, 0.03); 
                 } else {
-                    playPluck(quantTime, Math.floor(Math.random() * 5), 0.5, 0.1, 0.6);
+                    // Dovt "kluck"
+                    playPluck(quantTime, 0, 0.2, 0.05, 0.2);
                 }
             }
         } else if (key === '\n') {
@@ -550,8 +564,8 @@ export const HardForkEngine = (function() {
             currentSentenceLen++;
             
             const s = getStats();
-            const verseSteps = [0, -3, 2, -5, 4];
-            currentKeyShift = verseSteps[s.paragraphs % verseSteps.length];
+            const verseSteps = [0, 7, -5, 2, -3, 4, 9, 5, -2, -7];
+            currentKeyShift = verseSteps[(s.headings || 0) % verseSteps.length];
             
             if (masterFilter) {
                 masterFilter.frequency.cancelScheduledValues(now);
@@ -560,6 +574,41 @@ export const HardForkEngine = (function() {
                 masterFilter.frequency.exponentialRampToValueAtTime(18000, now + SIXTEENTH_DUR * 16);
                 sweepUntilTime = now + SIXTEENTH_DUR * 16;
             }
+        } else if (key === '#') {
+            typeHeat = Math.min(1.2, typeHeat + 0.1);
+            currentSentenceLen++;
+            const s = getStats();
+            if (s.headings > lastHeadingCount) {
+                lastHeadingCount = s.headings;
+                const level = s.lastHeadingLevel || 1;
+                
+                if (level === 1) {
+                    // Boot-up sweep stort (H1)
+                    if (masterFilter) {
+                        masterFilter.frequency.cancelScheduledValues(now);
+                        masterFilter.frequency.setValueAtTime(200, now);
+                        masterFilter.frequency.exponentialRampToValueAtTime(18000, now + SIXTEENTH_DUR * 8);
+                        sweepUntilTime = now + SIXTEENTH_DUR * 8;
+                    }
+                    playBass(now, true, 0.4); 
+                } else if (level === 2) {
+                    // Snärtigare sweep (H2)
+                    if (masterFilter) {
+                        masterFilter.frequency.cancelScheduledValues(now);
+                        masterFilter.frequency.setValueAtTime(1000, now);
+                        masterFilter.frequency.exponentialRampToValueAtTime(12000, now + SIXTEENTH_DUR * 4);
+                        sweepUntilTime = now + SIXTEENTH_DUR * 4;
+                    }
+                    playBass(now, true, 0.2); 
+                } else {
+                    // H3+ (subtilt färgskifte)
+                    playPluck(now, currentMelDegree - 12, 0.5, 0.05, 0.8);
+                }
+                
+                const harmonicShiftCount = s.harmonicShiftCount || 0;
+                currentKeyShift = [0, 7, -5, 2, -3, 4, 9, 5, -2, -7][harmonicShiftCount % 10];
+            }
+            if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('char', 14);
         } else if (key === ' ') {
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
