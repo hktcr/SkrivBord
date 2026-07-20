@@ -3744,6 +3744,37 @@
             saveSettings(settings);
             updateLineHighlight(false);
         }
+        // ── Total Zen ──
+        let lastZenReset = 0;
+
+        function startZenTimer() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            clearTimeout(zenTimer);
+            overlay.classList.remove('zen-mode');
+            if (isFullscreen) {
+                zenTimer = setTimeout(() => {
+                    overlay.classList.add('zen-mode');
+                }, 3000);
+            }
+        }
+
+        function resetZen() {
+            if (!isFullscreen) return;
+            const now = Date.now();
+            if (now - lastZenReset < 200) return; // VEP Opt: Throttle events to prevent GC thrashing
+            lastZenReset = now;
+            
+            const overlay = document.getElementById('fullscreenOverlay');
+            if (overlay.classList.contains('zen-mode')) {
+                overlay.classList.remove('zen-mode');
+            }
+            clearTimeout(zenTimer);
+            zenTimer = setTimeout(() => {
+                if (isFullscreen) overlay.classList.add('zen-mode');
+            }, 3000);
+        }
+
+        // Zen triggers: mouse, keyboard, touch
         document.getElementById('fullscreenOverlay').addEventListener('mousemove', resetZen);
         document.getElementById('fullscreenOverlay').addEventListener('touchstart', resetZen);
         document.getElementById('fsTextarea').addEventListener('keydown', resetZen);
