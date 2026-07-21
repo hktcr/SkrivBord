@@ -592,6 +592,11 @@ export const VisualsEngine = (() => {
         // Render Mareld & HardFork
         if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode || config.spaceMode) && mareldCanvas && mareldCtx) {
 
+            // Clear canvas BEFORE any rendering
+            if (!config.spaceMode) {
+                mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
+            }
+
             if (config.spaceMode) {
                 initStars();
                 mareldCtx.fillStyle = '#020604';
@@ -634,7 +639,6 @@ export const VisualsEngine = (() => {
             }
 
             let activeSparks = 0;
-            mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
             
             // Ambient spawn for Eldflugor based on goal progress (if goal mode)
             if (config.skogstemaMode && config.goalProgress > 0 && config.fireflyMode === 'goal') {
