@@ -106,8 +106,8 @@ export const HardForkEngine = (function() {
     }
 
     function init(audioContext) {
-        if (!audioContext) return;
-        ctx = audioContext;
+        ctx = audioContext || ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (masterGain) return; // Already initialized
 
         createNoiseBuffer();
 

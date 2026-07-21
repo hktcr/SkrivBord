@@ -139,8 +139,8 @@ export const SpaceOdysseyEngine = (function() {
     }
 
     function init(audioContext) {
-        if (!audioContext) return;
-        ctx = audioContext;
+        ctx = audioContext || ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (masterGain) return; // Already initialized
 
         createNoiseBuffer();
         initPads();
@@ -561,7 +561,9 @@ export const SpaceOdysseyEngine = (function() {
 
         
     function handleChar(key, stats) {
-        if (!ctx) return;
+        if (!ctx) init();
+        if (!ctx) return; // Safety: if init still failed
+        if (ctx.state === 'suspended') ctx.resume();
         const now = ctx.currentTime;
 
         if (key === ' ' || key === 'Delete') {

@@ -3449,6 +3449,12 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (audioCtx.state === 'suspended') audioCtx.resume();
+            // Ensure engines are initialized with shared audioCtx
+            const profile = typewriterSoundProfile;
+            if (profile === 'hardfork' && window.HardForkEngine) window.HardForkEngine.init(audioCtx);
+            if (profile === 'space' && window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.init(audioCtx);
+            if (profile === 'valsang' && window.ValsangEngine) window.ValsangEngine.init(audioCtx);
+            if (profile === 'skogsklang' && window.SkogsklangEngine) window.SkogsklangEngine.init(audioCtx);
         }
         document.addEventListener('pointerdown', ensureAudio, { passive: true, capture: true });
 
