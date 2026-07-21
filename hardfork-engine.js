@@ -529,6 +529,7 @@ export const HardForkEngine = (function() {
 
     function handleChar(key, stats) {
         if (!ctx) init();
+        if (!ctx) return;
         if (ctx.state === 'suspended') ctx.resume();
         
         const lowKey = key.toLowerCase();

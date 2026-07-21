@@ -564,7 +564,20 @@ export const SpaceOdysseyEngine = (function() {
         if (!ctx) init();
         if (!ctx) return; // Safety: if init still failed
         if (ctx.state === 'suspended') ctx.resume();
+        
+        const lowKey = key.toLowerCase();
+        
+        if (!isTyping) {
+            isTyping = true;
+            isOutro = false;
+            nextNoteTime = Math.ceil((ctx.currentTime + 0.02) / SIXTEENTH_DUR) * SIXTEENTH_DUR;
+            step16 = 0;
+            playSubBass(ctx.currentTime);
+        }
+        
+        lastKeyTime = ctx.currentTime;
         const now = ctx.currentTime;
+        const quantTime = nextNoteTime;
 
         if (key === ' ' || key === 'Delete') {
             if (now - lastGlitchTime > 0.1) {
