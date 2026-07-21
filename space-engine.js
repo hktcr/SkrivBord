@@ -29,6 +29,7 @@ export const SpaceOdysseyEngine = (function() {
     let typeHeat = 0;
     let lastKeyTime = 0;
     let heatInterval = null;
+    let smoothedVowelRatio = 0.38;
 
     // Sequencer State
     let schedulerInterval = null;
@@ -85,7 +86,7 @@ export const SpaceOdysseyEngine = (function() {
         if (window.TextContext && typeof window.TextContext.getStats === 'function') {
             return window.TextContext.getStats();
         }
-        return { paragraphs: 0, vowelRatio: 0.38, g: 1.0 };
+        return { paragraphs: 0, vowelRatio: 0.38, g: 1.0, words: 0, headings: 0, N: 0, meanAlpha: 10 };
     }
 
     function createNoiseBuffer() {
@@ -140,10 +141,10 @@ export const SpaceOdysseyEngine = (function() {
 
     function init(audioContext) {
         ctx = audioContext || ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (!ctx) return;
         if (masterGain) return; // Already initialized
 
         createNoiseBuffer();
-        initPads();
 
         masterGain = ctx.createGain();
         masterGain.gain.value = globalVolume;
@@ -214,6 +215,9 @@ export const SpaceOdysseyEngine = (function() {
 
         masterGain.connect(ctx.destination);
         ctx.synthBus = synthBus;
+
+        // NOTE: initPads MUST come after synthBus and convolver are created
+        initPads();
 
         heatInterval = setInterval(() => {
             if (typeHeat > 0) {
@@ -454,15 +458,6 @@ export const SpaceOdysseyEngine = (function() {
             const stats = getStats();
             smoothedVowelRatio += (stats.vowelRatio - smoothedVowelRatio) * 0.1;
             
-            // Progressions: 8 bars loop (change every 2 bars)
-            let prog;
-            if (smoothedVowelRatio > 0.42) {
-                prog = [0, 2, 9, 7]; // I - II - vi - V (Undran)
-            } else {
-                prog = [0, -3, 5, 2]; // I - vi - IV - II (Driva)
-            }
-            currentChordOffset = prog[Math.floor(barNumber / 2) % 4];
-            
             if (barNumber % 2 === 0 && !isOutro) {
                 updatePads(time);
             }
@@ -477,7 +472,7 @@ export const SpaceOdysseyEngine = (function() {
                 }
             }
             
-            // 2. Låt groovet utvecklas beroende på ordmängd (ändrar mönster var 30:e ord)
+            // Låt groovet utvecklas beroende på ordmängd (ändrar mönster var 30:e ord)
             const wordEvolSeed = Math.floor(stats.words / 30) * 113;
             
             prng = mulberry32(Math.floor(docSeed) + wordEvolSeed + stats.paragraphs * 1000 + barNumber);
@@ -497,6 +492,7 @@ export const SpaceOdysseyEngine = (function() {
                 M_pending = null;
             }
         }
+
         const effectiveHeat = (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
         
         // Layer 0: Bass
@@ -540,9 +536,6 @@ export const SpaceOdysseyEngine = (function() {
                 let note = melodyBuffer[step/2 % melodyBuffer.length] || 4;
                 if (activeFillVariant === 'question' && step === 6) note = 3;
                 playLead(time, note, fillGain, 0.2); // Uses Lead voice
-                // Transmission convolver send
-                const convSend = ctx.createGain(); convSend.gain.value = 0.5;
-                //...
             }
             if (activeFillVariant === 'question') {
                 if (step === 8) playSpaceHat(time); // Sweep substitute
@@ -558,8 +551,50 @@ export const SpaceOdysseyEngine = (function() {
                 }
             }
         }
+    }
 
+    // --- Lookahead Scheduler (was missing — caused ReferenceError) ---
+    function schedule() {
+        if (!isTyping && !isOutro) return;
+        if (!ctx) return;
         
+        if (ctx.state === 'suspended') ctx.resume();
+        
+        const now = ctx.currentTime;
+        if (nextNoteTime < now) nextNoteTime = now + 0.05;
+        
+        while (nextNoteTime < now + LOOKAHEAD) {
+            scheduleStep(step16, nextNoteTime);
+            
+            const swingRatio = typeHeat < 0.5 ? 0.56 : 0.50;
+            const isOdd = (step16 % 2 === 1);
+            const stepDur = SIXTEENTH_DUR * 2 * (isOdd ? (1 - swingRatio) : swingRatio);
+            
+            nextNoteTime += stepDur;
+            step16++;
+            if (step16 >= 16) {
+                step16 = 0;
+                barNumber++;
+                
+                if (fillScheduledForNextBar) {
+                    isFillBar = true;
+                    fillScheduledForNextBar = false;
+                    activeFillVariant = pendingFillVariant;
+                } else if (isFillBar) {
+                    isFillBar = false;
+                }
+                
+                // Outro stops the clock here
+                if (isOutro) {
+                    isOutro = false;
+                    isTyping = false;
+                }
+            }
+        }
+    }
+
+    // --- Input Handling ---
+
     function handleChar(key, stats) {
         if (!ctx) init();
         if (!ctx) return; // Safety: if init still failed
@@ -578,11 +613,11 @@ export const SpaceOdysseyEngine = (function() {
         lastKeyTime = ctx.currentTime;
         const now = ctx.currentTime;
         const quantTime = nextNoteTime;
-
+        
         if (key === ' ' || key === 'Delete') {
             if (now - lastGlitchTime > 0.1) {
                 lastGlitchTime = now;
-                // Backspace: Static noise skur
+                // Static noise skur
                 const src = ctx.createBufferSource(); src.buffer = noiseBuffer;
                 const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 2500; filter.Q.value = 3;
                 const gain = ctx.createGain(); gain.gain.setValueAtTime(0, now); gain.gain.setTargetAtTime(0.05, now, 0.005); gain.gain.setTargetAtTime(0.0001, now + 0.08, 0.01);
@@ -715,7 +750,6 @@ export const SpaceOdysseyEngine = (function() {
             activeAckordDegrees = [currentMelDegree]; 
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('letter', currentMelDegree);
         }
-
     }
 
     function handleKey(e) {
