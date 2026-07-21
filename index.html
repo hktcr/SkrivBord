@@ -1272,7 +1272,8 @@
             border-color: rgba(255,255,255,0.2);
         }
 
-        .fs-btn-full.active {
+        .fs-btn-full.active,
+        .fs-btn.active {
             background: var(--accent-glow);
             border-color: var(--accent);
             color: var(--accent-light);
@@ -2187,7 +2188,7 @@
                 <button class="fs-btn tooltip-wrap" style="color:var(--text-dim);" data-tip="Kortkommandon" onclick="openShortcuts()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="6" y1="12" x2="6.01" y2="12"></line><line x1="10" y1="12" x2="10.01" y2="12"></line><line x1="14" y1="12" x2="14.01" y2="12"></line><line x1="18" y1="12" x2="18.01" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg></button>
                 <button class="fs-btn tooltip-wrap" id="btnFsTheme" data-tip="Byt ljust/mörkt tema" onclick="toggleFsTheme()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Tema</button>
                 <button class="fs-btn tooltip-wrap" id="btnKatakana" data-tip="Glimrande matrix-bakgrund" onclick="toggleKatakanaBg()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Katakana</button>
-                <button class="fs-btn tooltip-wrap" id="btnFsMute" data-tip="Stäng av/sätt på skrivljud" onclick="toggleMute()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg> Mute</button>
+                <button class="fs-btn tooltip-wrap" id="btnFsMute" data-tip="Stäng av/sätt på skrivljud" onclick="toggleMute()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg><span class="btn-label">Mute</span></button>
                 <button class="fs-btn tooltip-wrap" id="btnOutline" data-tip="Visa rubrik-outline" onclick="toggleOutline()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Outline</button>
                 <div class="fs-dropdown" id="fsSettingsDropdown">
                     <button class="fs-btn tooltip-wrap" id="btnFsSettings" data-tip="Fokusinställningar" onclick="toggleFsSettings(event)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Meny</button>
@@ -2198,7 +2199,7 @@
                             <span class="fs-width-value" id="fsWidthValue">72c</span>
                         </div>
                         <div class="fs-dropdown-item" style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px;">
-                            <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Dimma: Av</button>
+                            <button class="fs-btn-full" id="btnFocusDim" onclick="toggleFocusDimming()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg><span class="btn-label">Dimma: Av</span></button>
                         </div>
                         <div class="fs-dropdown-item fs-zone-control" id="fsZoneControl" style="display:none; padding-top:10px; margin-top:10px; border-top:1px solid var(--border);">
                             <label>Zon (rader)</label>
@@ -2209,7 +2210,7 @@
                             <button class="fs-btn-full" id="btnCenterScroll" style="display:none;" onclick="updateLineHighlight(true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Centrera aktiv rad</button>
                         </div>
                         <div class="fs-dropdown-item">
-                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg> Helskärm (F11)</button>
+                            <button class="fs-btn-full" id="btnBrowserFs" onclick="toggleBrowserFullscreen()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg><span class="btn-label">Helskärm (F11)</span></button>
                         </div>
                         <div class="fs-dropdown-item">
                             <button class="fs-btn-full" onclick="copyMarkdown()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Kopiera markdown</button>
@@ -2241,11 +2242,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
         <script type="module">
-        import { ValsangEngine } from './valsang-engine.js?v=60';
-        import { SkogsklangEngine } from './skogsklang-engine.js?v=60';
-        import { VisualsEngine } from './visuals-engine.js?v=60';
-        import { HardForkEngine } from './hardfork-engine.js?v=60';
-        import { SpaceOdysseyEngine } from './space-engine.js?v=1';
+        import { ValsangEngine } from './valsang-engine.js?v=61';
+        import { SkogsklangEngine } from './skogsklang-engine.js?v=61';
+        import { VisualsEngine } from './visuals-engine.js?v=61';
+        import { HardForkEngine } from './hardfork-engine.js?v=61';
+        import { SpaceOdysseyEngine } from './space-engine.js?v=61';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
