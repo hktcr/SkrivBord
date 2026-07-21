@@ -1045,8 +1045,14 @@
             inset: 0;
             z-index: 1000;
             flex-direction: column;
-            background: #111111;
+            background: radial-gradient(circle at center, #2d3630 0%, #1c211d 100%);
             transition: background 0.3s ease;
+        }
+
+        .fullscreen-overlay.bg-image {
+            background: linear-gradient(to bottom, rgba(28,33,29,0.7), rgba(28,33,29,0.85)),
+                        url('forest-bg.jpg') no-repeat center center !important;
+            background-size: cover !important;
         }
 
         .fullscreen-overlay.fs-light-mode {
@@ -1054,7 +1060,8 @@
         }
 
         .fullscreen-overlay.fs-light-mode #djupvattenContainer,
-        .fullscreen-overlay.fs-light-mode #mareldVeil {
+        .fullscreen-overlay.fs-light-mode #mareldVeil,
+        .fullscreen-overlay.fs-light-mode canvas {
             display: none !important;
         }
 
@@ -1636,7 +1643,7 @@
                 padding: 8px;
             }
 
-            .tb-btn {
+            .tb-btn, .btn-sm {
                 justify-content: center;
                 padding: 10px;
                 font-size: 0.8rem;
@@ -2243,6 +2250,7 @@
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
         window.VisualsEngine = VisualsEngine;
+        window.SpaceOdysseyEngine = SpaceOdysseyEngine;
     </script>
     <script>
         // ═══════════════════════════════════════════════
@@ -3170,8 +3178,6 @@
 
             // Apply editor colors
             const fsWrap = document.getElementById('fsEditorWrap');
-            fsWrap.style.background = '';
-            overlay.style.background = '';
             fsTa.style.color = '#ffffff'; // Tvinga fram vit färg i Zen-läget för kontrast mot den mörka skogen
 
 
@@ -3197,13 +3203,19 @@
                 overlay.classList.remove('bg-image');
             }
             
-            overlay.style.background = ''; // Strikt gråskala, oavsett ljudprofil
+            if (typewriterSoundProfile === 'skogsklang') {
+                overlay.style.background = "linear-gradient(to bottom, rgba(8, 12, 25, 0.7), rgba(4, 6, 12, 0.9)), url('forest-bg.jpg') no-repeat center center";
+                overlay.style.backgroundSize = 'cover';
+            } else if (typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space') {
+                overlay.style.background = "#020604";
+            } else {
+                overlay.style.background = ""; 
+            }
             
             document.getElementById('settZenBg').value = settings.fsBgType || 'gradient';
 
-            // Use solid background for active line to block Katakana
-            highlightColor = 'var(--app-bg)';
-            
+            // Fetch highlight color from settings (for Katakana/default themes)
+            highlightColor = settings.highlightColor || 'rgba(124,92,191,0.12)';
             const container = document.getElementById('fsEditorContainer');
             const btnCenter = document.getElementById('btnCenterScroll');
             if (typewriterEnabled) {
@@ -3368,6 +3380,12 @@
             if (window.SkogsklangEngine) {
                 window.SkogsklangEngine.destroy();
             }
+            if (window.HardForkEngine) {
+                window.HardForkEngine.destroy();
+            }
+            if (window.SpaceOdysseyEngine) {
+                window.SpaceOdysseyEngine.destroy();
+            }
             if (window.VisualsEngine) {
                 window.VisualsEngine.stop();
             }
@@ -3390,7 +3408,8 @@
         document.addEventListener('fullscreenchange', () => {
             const btn = document.getElementById('btnBrowserFs');
             if (btn) {
-                btn.textContent = document.fullscreenElement ? '⛶ Avsluta' : '⛶ Helskärm';
+                const label = btn.querySelector('.btn-label') || btn;
+                label.textContent = document.fullscreenElement ? '⛶ Avsluta' : '⛶ Helskärm';
             }
         });
 
@@ -3783,14 +3802,18 @@
             if (focusDimmingEnabled) {
                 container.classList.add('focus-dimming');
                 if (btn) {
-                    btn.textContent = '👁 Dimma: På ✓';
+                    const label = btn.querySelector('.btn-label');
+                    if (label) label.textContent = '👁 Dimma: På ✓';
+                    else btn.textContent = '👁 Dimma: På ✓';
                     btn.classList.add('active');
                 }
                 if (zoneControl) zoneControl.style.display = 'flex';
             } else {
                 container.classList.remove('focus-dimming');
                 if (btn) {
-                    btn.textContent = '👁 Dimma: Av';
+                    const label = btn.querySelector('.btn-label');
+                    if (label) label.textContent = '👁 Dimma: Av';
+                    else btn.textContent = '👁 Dimma: Av';
                     btn.classList.remove('active');
                 }
                 if (zoneControl) zoneControl.style.display = 'none';
@@ -3890,11 +3913,16 @@
         window.toggleMute = function toggleMute() {
             const settings = loadSettings();
             settings.typewriterSound = !settings.typewriterSound;
+            typewriterSoundEnabled = settings.typewriterSound; // BUG-1 FIX: sync runtime
             saveSettings(settings);
             applySettings(settings);
             
             const btn = document.getElementById('btnFsMute');
-            if (btn) btn.innerHTML = settings.typewriterSound ? '🔊 Mute' : '🔇 Unmute';
+            if (btn) {
+                const label = btn.querySelector('.btn-label');
+                if (label) label.textContent = settings.typewriterSound ? '🔊 Mute' : '🔇 Unmute';
+                else btn.innerHTML = settings.typewriterSound ? '🔊 Mute' : '🔇 Unmute';
+            }
             
             const track = document.getElementById('settTypewriterSound');
             if (track) {
@@ -3970,6 +3998,7 @@
             track.classList.toggle('active');
             const settings = loadSettings();
             settings.typewriter = track.classList.contains('active');
+            typewriterEnabled = settings.typewriter; // BUG-1 FIX: sync runtime
             saveSettings(settings);
         }
 
@@ -3979,6 +4008,7 @@
             
             const settings = loadSettings();
             settings.typewriterSound = track.classList.contains('active');
+            typewriterSoundEnabled = settings.typewriterSound; // BUG-1 FIX: sync runtime
             
             // Show/hide profile selection based on toggle
             document.getElementById('soundProfileRow').style.display = settings.typewriterSound ? 'flex' : 'none';
@@ -3994,6 +4024,7 @@
         function updateSoundProfileSetting() {
             const settings = loadSettings();
             settings.typewriterSoundProfile = document.getElementById('settTypewriterSoundProfile').value;
+            typewriterSoundProfile = settings.typewriterSoundProfile; // BUG-1 FIX: sync runtime
             saveSettings(settings);
             applySettings(settings);
             
@@ -4092,6 +4123,12 @@
             if (window.SkogsklangEngine) {
                 window.SkogsklangEngine.setVolume(settings.valsangVol);
                 window.SkogsklangEngine.setDepth(settings.valsangDepth);
+            }
+            if (window.HardForkEngine) { // BUG-8 FIX: sync volume
+                window.HardForkEngine.setVolume(settings.valsangVol);
+            }
+            if (window.SpaceOdysseyEngine) { // BUG-8 FIX: sync volume
+                window.SpaceOdysseyEngine.setVolume(settings.valsangVol);
             }
             if (window.VisualsEngine) {
                 window.VisualsEngine.setConfig({ fireflyMode: settings.fireflyMode || 'sentence' });

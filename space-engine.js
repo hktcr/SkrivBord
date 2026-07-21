@@ -492,7 +492,11 @@ export const SpaceOdysseyEngine = (function() {
                 delayFB_R.gain.setTargetAtTime(fb, time, 0.5);
             }
             
-            if (M_pending) 
+            if (M_pending) {
+                M = M_pending;
+                M_pending = null;
+            }
+        }
         const effectiveHeat = (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
         
         // Layer 0: Bass
@@ -556,6 +560,10 @@ export const SpaceOdysseyEngine = (function() {
         }
 
         
+    function handleChar(key, stats) {
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
         if (key === ' ' || key === 'Delete') {
             if (now - lastGlitchTime > 0.1) {
                 lastGlitchTime = now;
@@ -695,4 +703,21 @@ export const SpaceOdysseyEngine = (function() {
 
     }
 
-    {
+    function handleKey(e) {
+        if (e && e.key) handleChar(e.key);
+    }
+
+    function addTrace(midiNum, time) {
+        traces.push({ m: midiNum, born: time * 1000 });
+        if (traces.length > 50) traces.shift();
+    }
+
+    function getState() {
+        return { traces: traces, activeAckordDegrees: activeAckordDegrees };
+    }
+
+    let onSentenceCallback = null;
+    function onSentence(cb) { onSentenceCallback = cb; }
+
+    return { init, setVolume, setDepth, destroy, handleKey, handleChar, getState, onSentence, resetMemory };
+})();
