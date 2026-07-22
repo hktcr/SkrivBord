@@ -10,6 +10,7 @@ const TextContext = (function() {
         vowelCount: 0,
         fricCount: 0,
         wordCount: 0,
+        longWordCount: 0,
         sumWordLen: 0,
         sentCount: 0,
         sumSentLen: 0,
@@ -17,6 +18,7 @@ const TextContext = (function() {
         headings: 0,
         harmonicShiftCount: 0,
         lastHeadingLevel: 0,
+        lix: 0,
 
         // Derived stats
         meanAlpha: 14,
@@ -50,6 +52,7 @@ const TextContext = (function() {
         statsObj.vowelCount = 0;
         statsObj.fricCount = 0;
         statsObj.wordCount = 0;
+        statsObj.longWordCount = 0;
         statsObj.sumWordLen = 0;
         statsObj.sentCount = 0;
         statsObj.sumSentLen = 0;
@@ -73,6 +76,15 @@ const TextContext = (function() {
         
         statsObj.section_meanAlpha = statsObj.section_N > 0 ? statsObj.section_sumAlpha / statsObj.section_N : statsObj.meanAlpha;
         statsObj.section_vowelRatio = statsObj.section_N > 0 ? statsObj.section_vowelCount / statsObj.section_N : statsObj.vowelRatio;
+
+        // LIX (Läsbarhetsindex): (Ord / Meningar) + (Långa ord >6 bokstäver * 100 / Ord)
+        if (statsObj.wordCount > 0 && statsObj.sentCount > 0) {
+            const meanWordsPerSent = statsObj.wordCount / statsObj.sentCount;
+            const longWordRatio = (statsObj.longWordCount * 100) / statsObj.wordCount;
+            statsObj.lix = Math.round(meanWordsPerSent + longWordRatio);
+        } else {
+            statsObj.lix = 0;
+        }
     }
 
     function doFullScan() {
@@ -129,6 +141,7 @@ const TextContext = (function() {
                 if (currentWordLen > 0) {
                     statsObj.wordCount++;
                     statsObj.sumWordLen += currentWordLen;
+                    if (currentWordLen > 6) statsObj.longWordCount++;
                     currentWordLen = 0;
                 }
             }
@@ -144,6 +157,7 @@ const TextContext = (function() {
         if (currentWordLen > 0) {
             statsObj.wordCount++;
             statsObj.sumWordLen += currentWordLen;
+            if (currentWordLen > 6) statsObj.longWordCount++;
         }
         if (currentSentLen > 0 && statsObj.N > 0) {
             statsObj.sentCount++;

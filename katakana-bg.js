@@ -123,12 +123,14 @@ document.addEventListener('DOMContentLoaded', () => {
         window.katakanaEngine.setEnable(true);
     }
     
-    // Hook into typing events
+    // Hook into typing events (throttled to 1 per 100ms, reduced motion safe)
+    let lastKatakanaSpawnTime = 0;
     document.addEventListener('input', (e) => {
         if (e.target.tagName === 'TEXTAREA' && window.katakanaEngine) {
-            // Spawn 1-3 characters per keystroke
-            const count = Math.floor(Math.random() * 3) + 1;
-            for (let i = 0; i < count; i++) {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const now = Date.now();
+            if (now - lastKatakanaSpawnTime >= 100) {
+                lastKatakanaSpawnTime = now;
                 window.katakanaEngine.spawn();
             }
         }

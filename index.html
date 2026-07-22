@@ -2242,11 +2242,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
         <script type="module">
-        import { ValsangEngine } from './valsang-engine.js?v=64';
-        import { SkogsklangEngine } from './skogsklang-engine.js?v=64';
-        import { VisualsEngine } from './visuals-engine.js?v=64';
-        import { HardForkEngine } from './hardfork-engine.js?v=64';
-        import { SpaceOdysseyEngine } from './space-engine.js?v=64';
+        import { ValsangEngine } from './valsang-engine.js?v=65';
+        import { SkogsklangEngine } from './skogsklang-engine.js?v=65';
+        import { VisualsEngine } from './visuals-engine.js?v=65';
+        import { HardForkEngine } from './hardfork-engine.js?v=65';
+        import { SpaceOdysseyEngine } from './space-engine.js?v=65';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
@@ -3444,17 +3444,53 @@
         document.getElementById('fsTextarea').addEventListener('click', () => setTimeout(checkCursorMove, 0));
         document.getElementById('fsTextarea').addEventListener('keyup', checkCursorMove);
         
-        function ensureAudio() {
-            if (!audioCtx || audioCtx.state === 'closed') {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        window.AudioEngineController = {
+            init(ctx, profile) {
+                try {
+                    if (profile === 'valsang' && window.ValsangEngine) window.ValsangEngine.init(ctx);
+                    else if (profile === 'skogsklang' && window.SkogsklangEngine) window.SkogsklangEngine.init(ctx);
+                    else if (profile === 'hardfork' && window.HardForkEngine) window.HardForkEngine.init(ctx);
+                    else if (profile === 'space' && window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.init(ctx);
+                } catch(e) {
+                    console.warn('AudioEngineController init error:', e);
+                }
+            },
+            handleChar(ch, profile) {
+                try {
+                    let engine = null;
+                    if (profile === 'valsang') engine = window.ValsangEngine;
+                    else if (profile === 'skogsklang') engine = window.SkogsklangEngine;
+                    else if (profile === 'hardfork') engine = window.HardForkEngine;
+                    else if (profile === 'space') engine = window.SpaceOdysseyEngine;
+                    if (engine && typeof engine.handleChar === 'function') engine.handleChar(ch);
+                } catch(e) {
+                    console.warn('AudioEngineController handleChar error:', e);
+                }
             }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            // Ensure engines are initialized with shared audioCtx
-            const profile = typewriterSoundProfile;
-            if (profile === 'hardfork' && window.HardForkEngine) window.HardForkEngine.init(audioCtx);
-            if (profile === 'space' && window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.init(audioCtx);
-            if (profile === 'valsang' && window.ValsangEngine) window.ValsangEngine.init(audioCtx);
-            if (profile === 'skogsklang' && window.SkogsklangEngine) window.SkogsklangEngine.init(audioCtx);
+        };
+
+        window.VisualsController = {
+            syncHardForkChars() {
+                try {
+                    if (window.VisualsEngine && typeof window.VisualsEngine.syncHardForkChars === 'function') {
+                        window.VisualsEngine.syncHardForkChars();
+                    }
+                } catch(e) {
+                    console.warn('VisualsController sync error:', e);
+                }
+            }
+        };
+
+        function ensureAudio() {
+            try {
+                if (!audioCtx || audioCtx.state === 'closed') {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                window.AudioEngineController.init(audioCtx, typewriterSoundProfile);
+            } catch(e) {
+                console.warn('ensureAudio error:', e);
+            }
         }
         document.addEventListener('pointerdown', ensureAudio, { passive: true, capture: true });
 
@@ -3462,27 +3498,91 @@
             if (!typewriterSoundEnabled) return;
             ensureAudio();
             const profile = (typeof settings !== 'undefined' ? settings : loadSettings()).typewriterSoundProfile || typewriterSoundProfile;
-            let engine = null;
-            if (profile === 'valsang') engine = window.ValsangEngine;
-            else if (profile === 'skogsklang') engine = window.SkogsklangEngine;
-            else if (profile === 'hardfork') engine = window.HardForkEngine;
-            else if (profile === 'space') engine = window.SpaceOdysseyEngine;
-            if (!engine) return;
-            
             const t = ev.inputType;
             if (t === 'insertText' && ev.data) {
-                for (const ch of ev.data) engine.handleChar(ch);
+                for (const ch of ev.data) window.AudioEngineController.handleChar(ch, profile);
             } else if (t === 'insertLineBreak' || t === 'insertParagraph') {
-                engine.handleChar('\n');
+                window.AudioEngineController.handleChar('\n', profile);
             } else if (t.startsWith('deleteContent')) {
-                engine.handleChar('\b');
-                if ((typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space') && window.VisualsEngine && window.VisualsEngine.syncHardForkChars) {
-                    window.VisualsEngine.syncHardForkChars();
+                window.AudioEngineController.handleChar('\b', profile);
+                if (typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space') {
+                    window.VisualsController.syncHardForkChars();
                 }
             }
         });
 
+        function handleSmartTyping(e, textarea) {
+            if (!textarea) return;
+            
+            // Smart list continuation on Enter
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                const val = textarea.value;
+                const pos = textarea.selectionStart;
+                const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+                const line = val.substring(lineStart, pos);
+                
+                const bulletMatch = line.match(/^(\s*)(-|\*|\+|\d+\.)\s+/);
+                if (bulletMatch) {
+                    const prefix = bulletMatch[1];
+                    const marker = bulletMatch[2];
+                    const isNum = /^\d+\.$/.test(marker);
+                    
+                    // If empty bullet line, cancel list
+                    if (line.trim() === marker) {
+                        e.preventDefault();
+                        textarea.setRangeText('', lineStart, pos, 'end');
+                        return;
+                    }
+                    
+                    e.preventDefault();
+                    let newMarker = marker;
+                    if (isNum) {
+                        const num = parseInt(marker) + 1;
+                        newMarker = `${num}.`;
+                    }
+                    const insertStr = `\n${prefix}${newMarker} `;
+                    document.execCommand('insertText', false, insertStr);
+                    return;
+                }
+            }
+
+            // Smart Tab indentation
+            if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                document.execCommand('insertText', false, '  ');
+                return;
+            }
+
+            // Markdown Shortcuts: Cmd/Ctrl + B, I, K
+            if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+                const key = e.key.toLowerCase();
+                if (key === 'b' || key === 'i' || key === 'k') {
+                    e.preventDefault();
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const sel = textarea.value.substring(start, end);
+                    let wrapper = '';
+                    if (key === 'b') wrapper = '**';
+                    else if (key === 'i') wrapper = '*';
+                    else if (key === 'k') {
+                        const url = prompt('Ange URL för länk:', 'https://');
+                        if (url) {
+                            const linkText = sel || 'länktext';
+                            document.execCommand('insertText', false, `[${linkText}](${url})`);
+                        }
+                        return;
+                    }
+                    if (sel.startsWith(wrapper) && sel.endsWith(wrapper) && sel.length >= wrapper.length * 2) {
+                        document.execCommand('insertText', false, sel.substring(wrapper.length, sel.length - wrapper.length));
+                    } else {
+                        document.execCommand('insertText', false, `${wrapper}${sel || 'text'}${wrapper}`);
+                    }
+                }
+            }
+        }
+
         document.getElementById('fsTextarea').addEventListener('keydown', (e) => {
+            handleSmartTyping(e, e.target);
             setTimeout(checkCursorMove, 0);
 
             // Skrivmaskinsljud om påslaget

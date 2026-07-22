@@ -304,6 +304,7 @@ export const SkogsklangEngine = (() => {
         modulator.start();
         carrier.stop(ctx.currentTime + 2.5);
         modulator.stop(ctx.currentTime + 2.5);
+        carrier.onended = () => { try { carrier.disconnect(); modulator.disconnect(); modGain.disconnect(); gain.disconnect(); } catch(e){} };
     }
 
     function getState() {

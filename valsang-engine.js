@@ -209,6 +209,7 @@ export const ValsangEngine = (() => {
             filter.connect(gain);
             noise.start();
             noise.stop(ctx.currentTime + duration);
+            noise.onended = () => { try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch(e){} };
         } else {
             // Sine blip
             osc.type = 'sine';
@@ -219,6 +220,7 @@ export const ValsangEngine = (() => {
             osc.connect(gain);
             osc.start();
             osc.stop(ctx.currentTime + duration);
+            osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch(e){} };
         }
         
         if (routing === 'dry' || routing === 'both') gain.connect(dryGain);
@@ -262,6 +264,7 @@ export const ValsangEngine = (() => {
         });
         
         echoOsc.stop(t + 1.0);
+        echoOsc.onended = () => { try { echoOsc.disconnect(); echoGain.disconnect(); filter.disconnect(); panner.disconnect(); } catch(e){} };
     }
 
     function emitTrace(midi, type, durMs) {

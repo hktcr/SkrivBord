@@ -321,6 +321,13 @@ export const SpaceOdysseyEngine = (function() {
         // Swell gain
         padGainNode.gain.setTargetAtTime(0.0625, time, 0.2); // +25% of 0.05
         padGainNode.gain.setTargetAtTime(0.05, time + 1.0, 0.5);
+
+        // Semantisk rumsakustik: justera reverb utifrån meningslängd
+        const stats = getStats();
+        if (reverbGain && stats && stats.meanSentLen) {
+            const wetTarget = clamp(0.3 + (stats.meanSentLen / 120) * 0.4, 0.3, 0.7);
+            reverbGain.gain.setTargetAtTime(wetTarget, time, 1.0);
+        }
     }
 
     function playSubBass(time) {
