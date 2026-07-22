@@ -2244,12 +2244,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
         <script type="module">
-        import { ValsangEngine } from './valsang-engine.js?v=67';
-        import { SkogsklangEngine } from './skogsklang-engine.js?v=67';
-        import { VisualsEngine } from './visuals-engine.js?v=67';
-        import { HardForkEngine } from './hardfork-engine.js?v=67';
-        import { SpaceOdysseyEngine } from './space-engine.js?v=67';
-        import { DjupsinnEngine } from './djupsinn-engine.js?v=67';
+        import { ValsangEngine } from './valsang-engine.js?v=68';
+        import { SkogsklangEngine } from './skogsklang-engine.js?v=68';
+        import { VisualsEngine } from './visuals-engine.js?v=68';
+        import { HardForkEngine } from './hardfork-engine.js?v=68';
+        import { SpaceOdysseyEngine } from './space-engine.js?v=68';
+        import { DjupsinnEngine } from './djupsinn-engine.js?v=68';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
@@ -3272,9 +3272,9 @@
             buildOutline();
             startZenTimer();
 
-            // Initiera Valsång/Skogsklang om det är valt
+            // Initiera Valsång/Skogsklang/Space/Djupsinn om ljud är PÅ
             if (window.TextContext) window.TextContext.attach(document.getElementById('fsTextarea'));
-            const isContinuousProfile = ['valsang', 'skogsklang', 'hardfork', 'space'].includes(typewriterSoundProfile);
+            const isContinuousProfile = ['valsang', 'skogsklang', 'hardfork', 'space', 'djupsinn'].includes(typewriterSoundProfile);
             if (isContinuousProfile && typewriterSoundEnabled) {
                 if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -3312,9 +3312,14 @@
                         }
                     });
                 }
+                if (typewriterSoundProfile === 'djupsinn' && window.DjupsinnEngine) {
+                    window.DjupsinnEngine.init(audioCtx);
+                    window.DjupsinnEngine.setVolume(settings.valsangVol !== undefined ? settings.valsangVol : 0.6);
+                    window.DjupsinnEngine.setDepth(settings.valsangDepth !== undefined ? settings.valsangDepth : 1.0);
+                }
             }
             
-            // Initiera VisualsEngine
+            // Initiera VisualsEngine (oberoende av om ljud är på eller av)
             if (window.VisualsEngine) {
                 const domElements = {
                     sonogramCanvas: document.getElementById('sonogramCanvas'),
@@ -3333,25 +3338,32 @@
                     stateProvider = () => window.HardForkEngine.getState();
                 } else if (typewriterSoundProfile === 'space' && window.SpaceOdysseyEngine) {
                     stateProvider = () => window.SpaceOdysseyEngine.getState();
+                } else if (typewriterSoundProfile === 'djupsinn' && window.DjupsinnEngine) {
+                    stateProvider = () => window.DjupsinnEngine.getState();
                 }
+
+                const bgType = settings.fsBgType || 'gradient';
+                const isDjupsinnVisual = (bgType === 'djupsinn');
+                const isSpaceVisual = (bgType === 'space' || typewriterSoundProfile === 'space');
+                const isHardforkVisual = (bgType === 'hardfork' || typewriterSoundProfile === 'hardfork');
+                const isSkogVisual = (bgType === 'skogsklang' || typewriterSoundProfile === 'skogsklang');
 
                 window.VisualsEngine.init(domElements, stateProvider);
                 window.VisualsEngine.setConfig({
                     sonogramEnabled: settings.valsangSonogram !== false,
                     djupvattenEnabled: settings.valsangDjupvatten !== false,
                     mareldEnabled: settings.valsangMareld !== false,
-                    skogstemaMode: (typewriterSoundProfile === 'skogsklang'),
-                    hardforkMode: (typewriterSoundProfile === 'hardfork' || typewriterSoundProfile === 'space'),
-                    spaceMode: (typewriterSoundProfile === 'space'),
+                    skogstemaMode: isSkogVisual,
+                    hardforkMode: isHardforkVisual,
+                    spaceMode: isSpaceVisual,
+                    djupsinnMode: isDjupsinnVisual,
                     fireflyMode: settings.fireflyMode || 'sentence',
                     goalProgress: window._currentGoalProgress || 0,
                     theme: 'dark'
                 });
                 
-                // Bara kör om Valsång eller Skogsklang är valt
-                if (isContinuousProfile && typewriterSoundEnabled) {
-                    window.VisualsEngine.start();
-                }
+                // Starta visualiseringar alltid vid fokusläge
+                window.VisualsEngine.start();
             }
 
             setTimeout(() => {
@@ -3379,18 +3391,17 @@
 
             overlay.classList.remove('visible');
 
-            if (window.ValsangEngine) {
-                window.ValsangEngine.destroy();
+            // Stäng av ALLA ljudmotorer vid avslutning av fokusläge
+            if (window.ValsangEngine) window.ValsangEngine.destroy();
+            if (window.SkogsklangEngine) window.SkogsklangEngine.destroy();
+            if (window.HardForkEngine) window.HardForkEngine.destroy();
+            if (window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.destroy();
+            if (window.DjupsinnEngine) window.DjupsinnEngine.destroy();
+
+            if (audioCtx && audioCtx.state === 'running') {
+                try { audioCtx.suspend(); } catch(e){}
             }
-            if (window.SkogsklangEngine) {
-                window.SkogsklangEngine.destroy();
-            }
-            if (window.HardForkEngine) {
-                window.HardForkEngine.destroy();
-            }
-            if (window.SpaceOdysseyEngine) {
-                window.SpaceOdysseyEngine.destroy();
-            }
+
             if (window.VisualsEngine) {
                 window.VisualsEngine.stop();
             }
