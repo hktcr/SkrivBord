@@ -2072,6 +2072,7 @@
             <div class="setting-row" id="soundProfileRow" style="display: none;">
                 <label>Ljudprofil</label>
                 <select id="settTypewriterSoundProfile" onchange="updateSoundProfileSetting()" style="width: auto; max-width: 300px; padding: 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+                    <option value="djupsinn">🧘 Monolith: Djupsinn (Ultimat Fokus)</option>
                     <option value="digital">Digital (Lätt)</option>
                     <option value="mechanical">Mekanisk (Klassisk)</option>
                     <option value="electric">Elektrisk (Snabb & Rapp)</option>
@@ -2135,6 +2136,7 @@
             <div class="setting-row">
                 <label>Zen Bakgrund</label>
                 <select id="settZenBg" onchange="changeZenBg(this.value)" style="background:var(--app-bg);color:var(--text-bright);border:1px solid rgba(255,255,255,0.1);padding:4px 8px;border-radius:4px;outline:none;cursor:pointer;">
+                    <option value="djupsinn">🧘 Monolith: Djupsinn</option>
                     <option value="gradient">Skog (Mörk gradient)</option>
                     <option value="image">Skogslandskap (Bild)</option>
                 </select>
@@ -2242,12 +2244,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
         <script type="module">
-        import { ValsangEngine } from './valsang-engine.js?v=65';
-        import { SkogsklangEngine } from './skogsklang-engine.js?v=65';
-        import { VisualsEngine } from './visuals-engine.js?v=65';
-        import { HardForkEngine } from './hardfork-engine.js?v=65';
-        import { SpaceOdysseyEngine } from './space-engine.js?v=65';
-        import { DjupsinnEngine } from './djupsinn-engine.js?v=65';
+        import { ValsangEngine } from './valsang-engine.js?v=67';
+        import { SkogsklangEngine } from './skogsklang-engine.js?v=67';
+        import { VisualsEngine } from './visuals-engine.js?v=67';
+        import { HardForkEngine } from './hardfork-engine.js?v=67';
+        import { SpaceOdysseyEngine } from './space-engine.js?v=67';
+        import { DjupsinnEngine } from './djupsinn-engine.js?v=67';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
@@ -4291,6 +4293,14 @@
                 overlay.classList.add('bg-image');
             } else {
                 overlay.classList.remove('bg-image');
+            }
+
+            if (window.VisualsEngine && typeof window.VisualsEngine.setConfig === 'function') {
+                if (val === 'djupsinn') {
+                    window.VisualsEngine.setConfig({ djupsinnMode: true, spaceMode: false, hardforkMode: false, skogstemaMode: false });
+                } else {
+                    window.VisualsEngine.setConfig({ djupsinnMode: false });
+                }
             }
         }
 
