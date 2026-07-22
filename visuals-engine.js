@@ -24,8 +24,12 @@ export const VisualsEngine = (() => {
         goalProgress: 0,
         prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
         hardforkMode: false,
-        spaceMode: false
+        spaceMode: false,
+        djupsinnMode: false
     };
+
+    let djupsinnParticles = [];
+    let djupsinnTime = 0;
 
     // Data structures
     let traces = [];
@@ -118,8 +122,8 @@ export const VisualsEngine = (() => {
     function setConfig(newConfig) {
         config = { ...config, ...newConfig };
         
-        // Vindsus-läget och HardFork tvingar bort havstemat
-        if (config.skogstemaMode || config.hardforkMode || config.spaceMode) {
+        // Vindsus-läget, HardFork, Space och Djupsinn tvingar bort havstemat
+        if (config.skogstemaMode || config.hardforkMode || config.spaceMode || config.djupsinnMode) {
             config.djupvattenEnabled = false;
             config.mareldEnabled = false;
             
@@ -589,12 +593,70 @@ export const VisualsEngine = (() => {
         
         let needsNextFrame = false;
         
-        // Render Mareld & HardFork
-        if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode || config.spaceMode) && mareldCanvas && mareldCtx) {
+        // Render Mareld, HardFork, Space & Djupsinn
+        if ((config.mareldEnabled || config.skogstemaMode || config.hardforkMode || config.spaceMode || config.djupsinnMode) && mareldCanvas && mareldCtx) {
 
             // Clear canvas BEFORE any rendering
-            if (!config.spaceMode) {
+            if (!config.spaceMode && !config.djupsinnMode) {
                 mareldCtx.clearRect(0, 0, mareldCanvas.width, mareldCanvas.height);
+            }
+
+            if (config.djupsinnMode) {
+                if (djupsinnParticles.length === 0) {
+                    for (let i = 0; i < 45; i++) {
+                        djupsinnParticles.push({
+                            x: Math.random() * window.innerWidth,
+                            y: Math.random() * window.innerHeight,
+                            radius: Math.random() * 80 + 40,
+                            vx: (Math.random() - 0.5) * 0.4,
+                            vy: (Math.random() - 0.5) * 0.4,
+                            hue: Math.random() > 0.4 ? 35 : 120,
+                            alpha: Math.random() * 0.18 + 0.05
+                        });
+                    }
+                }
+
+                djupsinnTime += dt;
+                mareldCtx.fillStyle = '#1E201E';
+                mareldCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+                const isTyping = (performance.now() - lastKeyTime < 2000);
+                
+                djupsinnParticles.forEach(p => {
+                    if (isTyping) {
+                        p.x += (p.vx + 0.8) * dt * 60;
+                        p.y += p.vy * dt * 30;
+                    } else {
+                        p.x += Math.sin(djupsinnTime * 0.5 + p.radius) * 0.3;
+                        p.y += Math.cos(djupsinnTime * 0.5 + p.radius) * 0.3;
+                    }
+
+                    if (p.x > window.innerWidth + 100) p.x = -100;
+                    if (p.x < -100) p.x = window.innerWidth + 100;
+                    if (p.y > window.innerHeight + 100) p.y = -100;
+                    if (p.y < -100) p.y = window.innerHeight + 100;
+
+                    const grad = mareldCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                    const colorStr = p.hue === 35 ? '224, 169, 109' : '96, 100, 95';
+                    grad.addColorStop(0, `rgba(${colorStr}, ${p.alpha})`);
+                    grad.addColorStop(1, `rgba(${colorStr}, 0)`);
+
+                    mareldCtx.fillStyle = grad;
+                    mareldCtx.beginPath();
+                    mareldCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    mareldCtx.fill();
+                });
+
+                const breathe = (Math.sin(djupsinnTime * 1.2) + 1) * 0.5;
+                mareldCtx.strokeStyle = `rgba(212, 154, 137, ${0.02 + breathe * 0.03})`;
+                mareldCtx.lineWidth = 2;
+                mareldCtx.beginPath();
+                const midY = window.innerHeight * 0.85;
+                mareldCtx.moveTo(0, midY + Math.sin(djupsinnTime) * 20);
+                mareldCtx.quadraticCurveTo(window.innerWidth * 0.5, midY - 30 * breathe, window.innerWidth, midY + Math.cos(djupsinnTime) * 20);
+                mareldCtx.stroke();
+
+                needsNextFrame = true;
             }
 
             if (config.spaceMode) {

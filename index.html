@@ -2247,11 +2247,13 @@
         import { VisualsEngine } from './visuals-engine.js?v=65';
         import { HardForkEngine } from './hardfork-engine.js?v=65';
         import { SpaceOdysseyEngine } from './space-engine.js?v=65';
+        import { DjupsinnEngine } from './djupsinn-engine.js?v=65';
         window.ValsangEngine = ValsangEngine;
         window.SkogsklangEngine = SkogsklangEngine;
         window.HardForkEngine = HardForkEngine;
         window.VisualsEngine = VisualsEngine;
         window.SpaceOdysseyEngine = SpaceOdysseyEngine;
+        window.DjupsinnEngine = DjupsinnEngine;
     </script>
     <script>
         // ═══════════════════════════════════════════════
@@ -3451,6 +3453,7 @@
                     else if (profile === 'skogsklang' && window.SkogsklangEngine) window.SkogsklangEngine.init(ctx);
                     else if (profile === 'hardfork' && window.HardForkEngine) window.HardForkEngine.init(ctx);
                     else if (profile === 'space' && window.SpaceOdysseyEngine) window.SpaceOdysseyEngine.init(ctx);
+                    else if (profile === 'djupsinn' && window.DjupsinnEngine) window.DjupsinnEngine.init(ctx);
                 } catch(e) {
                     console.warn('AudioEngineController init error:', e);
                 }
@@ -3462,6 +3465,7 @@
                     else if (profile === 'skogsklang') engine = window.SkogsklangEngine;
                     else if (profile === 'hardfork') engine = window.HardForkEngine;
                     else if (profile === 'space') engine = window.SpaceOdysseyEngine;
+                    else if (profile === 'djupsinn') engine = window.DjupsinnEngine;
                     if (engine && typeof engine.handleChar === 'function') engine.handleChar(ch);
                 } catch(e) {
                     console.warn('AudioEngineController handleChar error:', e);
